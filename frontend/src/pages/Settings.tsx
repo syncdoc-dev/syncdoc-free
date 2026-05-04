@@ -43,7 +43,6 @@ export default function Settings() {
     slack_webhook_url: null,
     github_token: null,
   });
-  const [original, setOriginal] = useState<AppSettings | null>(null);
   const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,7 +68,6 @@ export default function Settings() {
     try {
       const data = await getSettings();
       setForm(data);
-      setOriginal(data);
       setDirty(new Set());
     } catch {
       // Settings endpoint may not exist yet (migration pending)
@@ -139,7 +137,6 @@ export default function Settings() {
       }
       const updated = await updateSettings(payload);
       setForm(updated);
-      setOriginal(updated);
       setDirty(new Set());
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

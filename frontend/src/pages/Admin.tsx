@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity,
@@ -107,7 +107,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     setLoading(true);
     setError("");
     fetch(`${getApiBase()}/admin/status`, {
@@ -122,11 +122,11 @@ export default function Admin() {
       .then(setData)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   return (
     <div>

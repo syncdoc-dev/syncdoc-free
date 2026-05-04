@@ -10,61 +10,75 @@ on:
         description: "Push images to Docker Hub"
         required: false
         default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
 
 jobs:
   publish:
     name: Build and Push to Docker Hub
     runs-on: ubuntu-latest
+    env:
+      DO_PUSH: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.push_images == 'true' }}
+      IMAGE_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_HUB_USERNAME || 'syncdocdev' }}
     
     strategy:
       matrix:
         include:
           - context: backend
-            image: syncdoc-dev/api
-            dockerfile: backend/Dockerfile
+            image_suffix: syncdoc-api
+            dockerfile: Dockerfile
           - context: frontend
-            image: syncdoc-dev/frontend
-            dockerfile: frontend/Dockerfile
+            image_suffix: syncdoc-frontend
+            dockerfile: Dockerfile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Docker Hub
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: docker/login-action@v3
+        if: env.DO_PUSH == 'true'
+        uses: docker/login-action@v4
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          username: ${{ env.IMAGE_NAMESPACE }}
+          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_HUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ matrix.image }}
+          images: docker.io/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image_suffix }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=ref,event=branch
             type=sha
 
-      - name: Build and push (if tagged)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: docker/build-push-action@v5
+      - name: Build and push
+        if: env.DO_PUSH == 'true'
+        uses: docker/build-push-action@v7
         with:
-          context: .
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
+          build-args: |
+            APP_VERSION=${{ github.ref_name }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Build only (manual dispatch without push)
+      - name: Build only
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.push_images == 'false'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
-          context: .
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: false
-          tags: ${{ matrix.image }}:latest
+          build-args: |
+            APP_VERSION=${{ github.sha }}
+          tags: docker.io/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image_suffix }}:dry-run

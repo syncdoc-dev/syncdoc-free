@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -13,12 +13,9 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
-
-# Copy application code
+# Copy application code and install Python dependencies
 COPY . .
+RUN pip install --no-cache-dir -e .
 
 # Run migrations on startup
 ENV PYTHONUNBUFFERED=1
