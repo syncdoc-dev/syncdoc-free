@@ -185,12 +185,16 @@ async def get_system_status(
 @router.get("/admin/db/tables")
 async def list_tables(db: AsyncSession = Depends(get_db)):
     """List all database tables"""
-    result = await db.execute(text("""
+    result = await db.execute(
+        text(
+            """
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
         ORDER BY table_name
-    """))
+    """
+        )
+    )
     tables = [row[0] for row in result.all()]
     return {"tables": tables}
 
@@ -202,11 +206,13 @@ async def table_data(
     """Get data from a specific table"""
     # Validate table name to prevent SQL injection
     result = await db.execute(
-        text("""
+        text(
+            """
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = :table
-    """),
+    """
+        ),
         {"table": table},
     )
 
@@ -219,12 +225,14 @@ async def table_data(
 
     # Get columns
     cols_result = await db.execute(
-        text("""
+        text(
+            """
         SELECT column_name, data_type
         FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = :table
         ORDER BY ordinal_position
-    """),
+    """
+        ),
         {"table": table},
     )
     columns = [{"name": row[0], "type": row[1]} for row in cols_result.all()]
