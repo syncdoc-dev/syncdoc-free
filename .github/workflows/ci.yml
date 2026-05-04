@@ -23,8 +23,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 5432:5432
 
       redis:
         image: redis:8-alpine
@@ -33,8 +31,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 6379:6379
 
     steps:
       - uses: actions/checkout@v4
@@ -64,8 +60,8 @@ jobs:
       - name: Run tests with pytest
         working-directory: backend
         env:
-          DATABASE_URL: postgresql+asyncpg://syncdoc:syncdoc_dev@localhost:5432/syncdoc
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: postgresql+asyncpg://syncdoc:syncdoc_dev@postgres:5432/syncdoc
+          REDIS_URL: redis://redis:6379/0
         run: pytest tests/ -v --cov=app --cov-report=term-missing
 
   frontend:
