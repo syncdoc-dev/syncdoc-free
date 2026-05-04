@@ -212,7 +212,10 @@ class TestBuildPrompt:
         prompt = _build_prompt(sample_source, nodes, [])
         assert "CI/CD Delivery Overview" in prompt
         assert "immediately after the Mermaid diagram and before the general Overview" in prompt
-        assert "pipeline stages, deployment environments, release flow, and deployment targets" in prompt
+        assert (
+            "pipeline stages, deployment environments, release flow, and deployment targets"
+            in prompt
+        )
 
     def test_prompt_summary_mode(self, sample_source):
         """Test that large sources use summary mode."""

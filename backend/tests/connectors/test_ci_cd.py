@@ -33,12 +33,20 @@ async def test_parse_gitlab_ci(ci_cd_fixtures_dir):
     results = await connector.parse(raw)
 
     names = {result.name for result in results}
-    deploy_job = next(result for result in results if result.name == "gitlab:.gitlab-ci.yml:deploy_prod")
+    deploy_job = next(
+        result for result in results if result.name == "gitlab:.gitlab-ci.yml:deploy_prod"
+    )
 
     assert "gitlab:.gitlab-ci.yml" in names
     assert "gitlab:.gitlab/deploy.yml" in names
     assert "gitlab:.gitlab-ci.yml:deploy" in names
     assert "env:production" in names
-    assert any(edge["relation_type"] == "deploys_to" and edge["target_name"] == "env:production" for edge in deploy_job.edges)
+    assert any(
+        edge["relation_type"] == "deploys_to" and edge["target_name"] == "env:production"
+        for edge in deploy_job.edges
+    )
     assert "target:kubernetes:cluster" in names
-    assert "target:container_registry:registry.gitlab.com/syncdoc-dev/syncdoc/frontend:$CI_COMMIT_SHA" in names
+    assert (
+        "target:container_registry:registry.gitlab.com/syncdoc-dev/syncdoc/frontend:$CI_COMMIT_SHA"
+        in names
+    )

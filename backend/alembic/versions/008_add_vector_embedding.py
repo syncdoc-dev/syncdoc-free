@@ -19,7 +19,8 @@ def upgrade() -> None:
     # Drop the placeholder UUID embedding column
     op.drop_column("doc_pages", "embedding")
 
-    # Add the real vector(1536) column for OpenAI embeddings — raw SQL because SA dialects don't know vector
+    # Add the real vector(1536) column for OpenAI embeddings.
+    # Raw SQL is required because SQLAlchemy dialects don't know pgvector yet.
     op.execute("ALTER TABLE doc_pages ADD COLUMN embedding vector(1536)")
 
     # HNSW index for fast cosine similarity search
