@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: fabricesemti80
+  description: Docker Swarm cluster setup and management
+  license: MIT
+dependencies:
+  - common

@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://user:pass@db:5432/app
+      REDIS_URL: redis://cache:6379/0
+    depends_on:
+      - db
+      - cache
+    networks:
+      - backend
+    volumes:
+      - app-data:/data
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  cache:
+    image: redis:7-alpine
+    networks:
+      - backend
+
+volumes:
+  app-data:
+  pg-data:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge

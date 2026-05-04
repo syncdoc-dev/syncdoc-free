@@ -1,0 +1,40 @@
+---
+- name: Install Docker CE
+  ansible.builtin.apt:
+    name: "docker-ce={{ docker_version }}*"
+    state: present
+    update_cache: true
+
+- name: Enable Docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Initialize swarm on first manager
+  community.docker.docker_swarm:
+    state: present
+    advertise_addr: "{{ swarm_advertise_interface }}"
+  when: swarm_init_node | default(false)
+  register: swarm_info
+
+- name: Join managers to swarm
+  community.docker.docker_swarm:
+    state: join
+    advertise_addr: "{{ swarm_advertise_interface }}"
+    join_token: "{{ hostvars[groups['managers'][0]].swarm_info.swarm_facts.JoinTokens.Manager }}"
+    remote_addrs: "{{ hostvars[groups['managers'][0]].ansible_host }}"
+  when: swarm_role == 'manager' and not (swarm_init_node | default(false))
+
+- name: Join workers to swarm
+  community.docker.docker_swarm:
+    state: join
+    join_token: "{{ hostvars[groups['managers'][0]].swarm_info.swarm_facts.JoinTokens.Worker }}"
+    remote_addrs: "{{ hostvars[groups['managers'][0]].ansible_host }}"
+  when: swarm_role == 'worker'
+
+- name: Configure node labels
+  community.docker.docker_node:
+    hostname: "{{ inventory_hostname }}"
+    labels: "{{ docker_swarm_worker_labels | default({}) }}"
+  when: docker_swarm_worker_labels is defined

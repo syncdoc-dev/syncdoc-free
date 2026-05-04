@@ -1,0 +1,85 @@
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=100]
+        files: ^backend/app/
+        stages: [pre-commit]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, --line-length=100]
+        files: ^backend/app/
+        stages: [pre-commit]
+      - id: ruff-format
+        files: ^backend/app/
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [
+          "types-redis",
+          "types-requests",
+          "types-pyyaml",
+          "sqlalchemy[mypy]",
+        ]
+        args: [--ignore-missing-imports]
+        exclude: ^backend/tests/
+        files: ^backend/app/
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: check-yaml
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      - id: backend-ruff-full
+        name: backend ruff (full app)
+        entry: python3.14 -m ruff
+        args: [check, backend/app/]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        files: ^backend/(app|tests)/
+
+      - id: backend-black-check-full
+        name: backend black check (full app)
+        entry: python3.14 -m black
+        args: [--check, backend/app/]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        files: ^backend/(app|tests)/
+
+      - id: backend-mypy-full
+        name: backend mypy (full app)
+        entry: python3.14 -m mypy
+        args: [backend/app/, --ignore-missing-imports]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        files: ^backend/(app|tests)/
+
+      - id: backend-pytest
+        name: backend pytest
+        entry: python3.14 -m pytest
+        args: [backend/tests, -q]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        files: ^backend/(app|tests)/

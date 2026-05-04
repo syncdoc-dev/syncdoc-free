@@ -1,0 +1,4 @@
+deploy_registry:
+  stage: deploy
+  script:
+    - docker push registry.gitlab.com/syncdoc-dev/syncdoc/frontend:$CI_COMMIT_SHA

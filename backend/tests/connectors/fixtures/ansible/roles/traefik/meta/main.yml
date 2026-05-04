@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: fabricesemti80
+  description: Traefik reverse proxy with Let's Encrypt and Cloudflare DNS
+  license: MIT
+dependencies:
+  - docker_swarm

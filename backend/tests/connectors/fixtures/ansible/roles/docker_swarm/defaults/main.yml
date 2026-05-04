@@ -1,0 +1,4 @@
+---
+docker_version: "24.0"
+swarm_role: worker
+swarm_advertise_interface: eth0

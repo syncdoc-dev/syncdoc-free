@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build_api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ghcr.io/syncdoc-dev/syncdoc/api:latest .
+      - run: docker push ghcr.io/syncdoc-dev/syncdoc/api:latest
+
+  deploy_prod:
+    needs: build_api
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: argocd app sync syncdoc-prod

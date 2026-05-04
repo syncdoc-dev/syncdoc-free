@@ -1,0 +1,6 @@
+---
+galaxy_info:
+  author: fabricesemti80
+  description: Common base configuration for all hosts
+  license: MIT
+dependencies: []

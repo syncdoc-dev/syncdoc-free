@@ -1,0 +1,10 @@
+---
+domain: syncdoc.dev
+timezone: Europe/London
+ntp_servers:
+  - 0.uk.pool.ntp.org
+  - 1.uk.pool.ntp.org
+ssh_port: 22
+ansible_user: deploy
+ansible_become: true
+docker_version: "24.0"

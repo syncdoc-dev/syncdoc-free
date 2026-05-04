@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: fabricesemti80
+  description: Prometheus, Grafana, and node exporter monitoring stack
+  license: MIT
+dependencies:
+  - docker_swarm

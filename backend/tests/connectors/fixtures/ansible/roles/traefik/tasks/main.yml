@@ -1,0 +1,25 @@
+---
+- name: Create Traefik network
+  community.docker.docker_network:
+    name: proxy
+    driver: overlay
+    attachable: true
+
+- name: Deploy socket proxy
+  community.docker.docker_stack:
+    name: socket-proxy
+    compose:
+      - /opt/stacks/socket-proxy/docker-compose.yml
+    state: present
+
+- name: Deploy Traefik config
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: /opt/stacks/traefik/traefik.yml
+
+- name: Deploy Traefik stack
+  community.docker.docker_stack:
+    name: traefik
+    compose:
+      - /opt/stacks/traefik/docker-compose.yml
+    state: present

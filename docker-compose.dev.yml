@@ -1,0 +1,28 @@
+# Development override - uses GHCR.io images for API/worker, local for frontend
+# Use with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  api:
+    image: ghcr.io/syncdoc-dev/syncdoc/api:latest
+    environment:
+      DATABASE_URL: postgresql+asyncpg://syncdoc:syncdoc_dev@postgres:5432/syncdoc
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      PYTHONUNBUFFERED: "1"
+    volumes: null
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    image: ghcr.io/syncdoc-dev/syncdoc/api:latest
+    environment:
+      DATABASE_URL: postgresql+asyncpg://syncdoc:syncdoc_dev@postgres:5432/syncdoc
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      PYTHONUNBUFFERED: "1"
+    volumes: null
+    command: celery -A app.celery_app worker --loglevel=info
+
+  # Frontend uses local dev server (hot reload)
+  frontend:
+    ports:
+      - "5173:5173"

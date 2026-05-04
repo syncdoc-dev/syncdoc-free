@@ -1,0 +1,24 @@
+---
+- name: Configure GitHub Actions runners
+  hosts: runners
+  become: true
+  tasks:
+    - name: Install runner dependencies
+      ansible.builtin.apt:
+        name:
+          - curl
+          - jq
+          - libicu-dev
+        state: present
+
+    - name: Create runner user
+      ansible.builtin.user:
+        name: runner
+        shell: /bin/bash
+        groups: docker
+        append: true
+
+    - name: Download runner package
+      ansible.builtin.get_url:
+        url: "https://github.com/actions/runner/releases/download/v2.311.0/actions-runner-linux-x64-2.311.0.tar.gz"
+        dest: /opt/actions-runner/runner.tar.gz

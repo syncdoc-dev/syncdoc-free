@@ -1,0 +1,5 @@
+---
+swarm_init_node: true
+keepalived_priority: 150
+keepalived_role: MASTER
+virtual_ip: 10.0.30.20

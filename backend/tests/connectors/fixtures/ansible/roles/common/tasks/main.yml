@@ -1,0 +1,36 @@
+---
+- name: Set timezone
+  ansible.builtin.timezone:
+    name: "{{ timezone }}"
+
+- name: Configure NTP
+  ansible.builtin.template:
+    src: ntp.conf.j2
+    dest: /etc/ntp.conf
+  notify: restart ntp
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - htop
+      - vim
+      - curl
+      - git
+      - unzip
+      - jq
+      - net-tools
+    state: present
+    update_cache: true
+
+- name: Configure SSH hardening
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+  notify: restart sshd
+
+- name: Ensure deploy user exists
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    shell: /bin/bash
+    groups: sudo
+    append: true

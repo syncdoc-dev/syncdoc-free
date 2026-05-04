@@ -1,0 +1,4 @@
+---
+swarm_role: manager
+swarm_advertise_interface: eth0
+docker_swarm_manager_quorum: 2

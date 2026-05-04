@@ -1,0 +1,5 @@
+---
+swarm_role: worker
+docker_swarm_worker_labels:
+  - compute=true
+  - storage=true

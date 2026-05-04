@@ -1,0 +1,53 @@
+[tools]
+python = "3.12"
+
+[tasks."backend:setup"]
+description = "Install backend development dependencies into the active Python environment"
+run = "cd backend && python -m pip install -e '.[dev]'"
+
+[tasks."backend:test"]
+description = "Run backend Ruff, Black, and MyPy checks"
+run = [
+  "cd backend && python -m ruff check app/",
+  "cd backend && python -m black --check app/",
+  "cd backend && python -m mypy app --ignore-missing-imports",
+]
+
+[tasks.local]
+description = "Remove older local SyncDoc image tags before rebuilding"
+run = "./hack/local-build.sh cleanup"
+
+[tasks.build]
+description = "Build local SyncDoc Docker images"
+run = "./hack/local-build.sh build"
+
+[tasks."local:build"]
+description = "Build local Docker images and remove older SyncDoc image tags first"
+run = "./hack/local-build.sh full"
+
+[tasks."docker:build"]
+description = "Build local Docker images and remove older SyncDoc image tags first"
+run = "./hack/local-build.sh full"
+
+[tasks."orbstack:deploy"]
+description = "Build local images and run the production-like Orbstack stack"
+run = [
+  "./hack/local-build.sh full",
+  "docker compose -f docker-compose.orbstack.yml up -d --force-recreate",
+]
+
+[tasks."orbstack:down"]
+description = "Stop the local Orbstack stack"
+run = "docker compose -f docker-compose.orbstack.yml down"
+
+[tasks."orbstack:logs"]
+description = "Tail logs for the local Orbstack stack"
+run = "docker compose -f docker-compose.orbstack.yml logs -f frontend website api"
+
+[tasks."website:preview"]
+description = "Preview the marketing website locally on port 8088"
+run = "docker compose -f docker-compose.website.yml up --build"
+
+[tasks."website:down"]
+description = "Stop the local marketing website preview"
+run = "docker compose -f docker-compose.website.yml down"

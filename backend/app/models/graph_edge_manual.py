@@ -1,0 +1,53 @@
+"""Manual graph edges created by users."""
+
+from datetime import datetime, timezone
+
+import sqlalchemy as sa
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.core.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
+
+
+class GraphEdgeManual(Base):
+    __tablename__ = "graph_edges_manual"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    organization_id: Mapped[str] = mapped_column(
+        String,
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"),
+        index=True,
+    )
+    project_id: Mapped[str] = mapped_column(
+        String,
+        sa.ForeignKey("projects.id", ondelete="CASCADE"),
+        index=True,
+    )
+    source_id: Mapped[str | None] = mapped_column(
+        String,
+        sa.ForeignKey("sources.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    from_node_id: Mapped[str] = mapped_column(
+        String,
+        sa.ForeignKey("infra_nodes.id", ondelete="CASCADE"),
+        index=True,
+    )
+    to_node_id: Mapped[str] = mapped_column(
+        String,
+        sa.ForeignKey("infra_nodes.id", ondelete="CASCADE"),
+        index=True,
+    )
+    label: Mapped[str | None] = mapped_column(String, nullable=True)
+    color: Mapped[str] = mapped_column(String, default="#f97316")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )

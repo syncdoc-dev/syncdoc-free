@@ -1,0 +1,7 @@
+---
+github_runner_org: fabricesemti80
+github_runner_labels:
+  - self-hosted
+  - linux
+  - homelab
+github_runner_count: 2

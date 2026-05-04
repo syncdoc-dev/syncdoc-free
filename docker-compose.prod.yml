@@ -1,0 +1,37 @@
+# Production overrides for docker-compose.yml
+# NOTE: for a clean production run (pre-built images, no source mounts)
+# use docker-compose.deploy.yml directly via: mise run dkr:prod
+#
+# This file is useful for switching restart policies and images
+# on an existing dev stack without recreating volumes.
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    image: ghcr.io/syncdoc-dev/syncdoc/api:latest
+    restart: always
+    environment:
+      ENVIRONMENT: production
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+
+  worker:
+    image: ghcr.io/syncdoc-dev/syncdoc/api:latest
+    restart: always
+    environment:
+      ENVIRONMENT: production
+    command: celery -A app.celery_app worker --loglevel=info --concurrency 4
+
+  frontend:
+    image: ghcr.io/syncdoc-dev/syncdoc/frontend:latest
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-5174}:80"
+    volumes: null
+    command: null
+
+  postgres:
+    restart: always
+
+  redis:
+    restart: always

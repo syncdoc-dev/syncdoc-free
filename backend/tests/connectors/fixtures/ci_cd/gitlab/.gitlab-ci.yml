@@ -1,0 +1,20 @@
+stages:
+  - test
+  - deploy
+
+include:
+  - local: .gitlab/deploy.yml
+
+unit_tests:
+  stage: test
+  script:
+    - pytest
+
+deploy_prod:
+  stage: deploy
+  environment:
+    name: production
+  needs:
+    - unit_tests
+  script:
+    - kubectl apply -f k8s/
