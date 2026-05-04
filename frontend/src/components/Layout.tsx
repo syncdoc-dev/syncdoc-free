@@ -140,7 +140,7 @@ export default function Layout() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [currentProjectId]);
 
   const isViewer = user?.role === "viewer";
   const navItems = NAV.filter((item) => {

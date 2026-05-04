@@ -17,6 +17,7 @@ export interface ThemeMeta {
   swatch: string;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const THEMES: ThemeMeta[] = [
   { id: "original", label: "Original", swatch: "#34d1e8" },
   { id: "original_light", label: "Original Light", swatch: "#149a73" },
@@ -58,8 +59,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     ? THEMES.filter((themeMeta) => FREE_THEME_IDS.includes(themeMeta.id))
     : THEMES;
 
-  const isThemeLocked = (id: ThemeId) =>
-    isFreePlan && !FREE_THEME_IDS.includes(id);
+  const isThemeLocked = useCallback(
+    (id: ThemeId) => isFreePlan && !FREE_THEME_IDS.includes(id),
+    [isFreePlan]
+  );
 
   const setTheme = useCallback((id: ThemeId) => {
     if (isThemeLocked(id)) {
@@ -81,16 +84,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!entitlementsLoaded) return;
     if (isThemeLocked(theme)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeState("original");
       localStorage.setItem(storageKey, "original");
       if (token) {
         updateMe({ theme_id: "original" }).catch(() => {});
       }
     }
-  }, [entitlementsLoaded, isFreePlan, storageKey, theme, token]);
+  }, [entitlementsLoaded, isThemeLocked, storageKey, theme, token]);
 
   useEffect(() => {
     if (isValidTheme(user?.theme_id)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeState(user.theme_id);
       localStorage.setItem(storageKey, user.theme_id);
       return;
@@ -107,6 +112,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTheme() {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error("useTheme must be used within ThemeProvider");

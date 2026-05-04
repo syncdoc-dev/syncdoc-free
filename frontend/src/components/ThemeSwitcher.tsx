@@ -4,7 +4,7 @@ import { THEMES, useTheme } from "../context/ThemeContext";
 import UpgradeBadge from "./UpgradeBadge";
 
 export default function ThemeSwitcher() {
-  const { theme, setTheme, availableThemes, isThemeLocked } = useTheme();
+  const { theme, setTheme, isThemeLocked } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

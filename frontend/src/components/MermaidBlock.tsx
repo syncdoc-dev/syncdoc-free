@@ -21,7 +21,7 @@ function sanitizeMermaid(chart: string) {
   const fixedFirstLine = firstLine.replace(/^graph\s+/i, "flowchart ").replace(/;$/, "");
   const cleanedRest = rest
     .map((line) => {
-      const withQuotedNodes = line.replace(/\[([^\]\"]+)\]/g, (_, label: string) => {
+      const withQuotedNodes = line.replace(/\[([^\]"]+)\]/g, (_, label: string) => {
         const escaped = label.replace(/"/g, "&quot;");
         return `["${escaped}"]`;
       });

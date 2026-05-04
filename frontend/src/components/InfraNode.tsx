@@ -1,4 +1,5 @@
 import { memo } from "react";
+import React from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   Server,
@@ -47,11 +48,18 @@ function getIcon(kind: string): React.ElementType {
   return Server;
 }
 
+function IconRenderer({ kind, className }: { kind: string; className: string }) {
+  const Icon = getIcon(kind);
+  return React.createElement(Icon, { className });
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
 export function getToolFromKind(kind: string): string {
   const colon = kind.indexOf(":");
   return colon > 0 ? kind.slice(0, colon) : "other";
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const TOOL_COLORS: Record<string, { hex: string; glow: string; label: string }> = {
   tf: { hex: "#b596ff", glow: "rgba(181, 150, 255, 0.25)", label: "Terraform" },
   docker: { hex: "#5aa4ff", glow: "rgba(90, 164, 255, 0.25)", label: "Docker" },
@@ -70,7 +78,6 @@ function kindLabel(kind: string): string {
 
 function InfraNodeComponent({ data }: NodeProps) {
   const nodeData = data as unknown as InfraNodeData;
-  const Icon = getIcon(nodeData.kind);
   const isVertical = nodeData.direction === "TB";
   const tool = getToolFromKind(nodeData.kind);
   const tone = TOOL_COLORS[tool] ?? TOOL_COLORS.other;
@@ -105,7 +112,7 @@ function InfraNodeComponent({ data }: NodeProps) {
               color: tone.hex,
             }}
           >
-            <Icon className="h-4.5 w-4.5" />
+            <IconRenderer kind={nodeData.kind} className="h-4.5 w-4.5" />
           </span>
           <span
             className="app-kicker rounded-full border px-2.5 py-1 text-[10px]"

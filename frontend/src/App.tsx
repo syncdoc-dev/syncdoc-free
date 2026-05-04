@@ -30,7 +30,7 @@ function TokenHandler({ children }: { children: ReactNode }) {
       setToken(token);
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [setToken]);
 
   return <>{children}</>;
 }

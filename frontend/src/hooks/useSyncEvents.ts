@@ -29,6 +29,7 @@ export function useSyncEvents(onEvent: (event: SyncEventMessage) => void) {
 
   useEffect(() => {
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("offline");
       return;
     }
