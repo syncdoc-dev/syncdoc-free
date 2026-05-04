@@ -31,9 +31,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_source_credentials_source_id", "source_credentials", ["source_id"])
-    op.create_index(
-        "idx_source_credentials_created_by", "source_credentials", ["created_by"]
-    )
+    op.create_index("idx_source_credentials_created_by", "source_credentials", ["created_by"])
 
 
 def downgrade() -> None:

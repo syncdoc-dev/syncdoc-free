@@ -25,8 +25,7 @@ def upgrade() -> None:
 
     # HNSW index for fast cosine similarity search
     op.execute(
-        "CREATE INDEX idx_doc_pages_embedding ON doc_pages "
-        "USING hnsw (embedding vector_cosine_ops)"
+        "CREATE INDEX idx_doc_pages_embedding ON doc_pages USING hnsw (embedding vector_cosine_ops)"
     )
 
 
