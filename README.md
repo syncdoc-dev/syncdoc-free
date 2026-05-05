@@ -217,6 +217,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 ## Documentation
 
 - **Local Setup Troubleshooting**: See [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)
+- **Release Workflow**: See [docs/RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md)
 - **API Documentation**: Available at `/docs` when running the API
 - **Architecture**: See source code comments and docstrings
 
