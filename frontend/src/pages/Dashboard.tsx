@@ -90,8 +90,8 @@ export default function Dashboard() {
     <div className="space-y-5">
       <section className="app-panel overflow-hidden rounded-[32px]">
         <div className="brand-ribbon h-[2px] w-full opacity-90" />
-        <div className="grid gap-6 px-6 py-7 lg:grid-cols-[1.2fr_0.8fr] lg:px-7 lg:py-8">
-          <div>
+        <div className="grid gap-6 px-6 py-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:px-7 lg:py-8">
+          <div className="min-w-0">
             <div className="app-kicker text-sm text-[var(--accent)]">Live workspace</div>
             <h2 className="app-section-title mt-3 max-w-3xl text-4xl leading-none text-[var(--text-white)] sm:text-5xl">
               Docs, graph, and drift signals in one operator view.
@@ -117,7 +117,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--bg-input)]/70 p-5">
+          <div className="min-w-0 rounded-[28px] border border-[var(--border)] bg-[var(--bg-input)]/70 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="app-kicker text-[11px] text-[var(--text-muted)]">Snapshot</div>

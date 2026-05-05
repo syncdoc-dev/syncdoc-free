@@ -285,10 +285,12 @@ body,
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  overflow-x: hidden;
   font-family: Inter, "Segoe UI", sans-serif;
   color: var(--text-primary);
   background:
@@ -354,6 +356,9 @@ textarea {
 .app-shell {
   min-height: 100vh;
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .app-panel {
