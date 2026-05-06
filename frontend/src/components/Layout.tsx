@@ -350,6 +350,10 @@ export default function Layout() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
+                <div className="rounded-full border border-[var(--border-bright)] bg-[var(--accent-bg)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                  Version
+                  <span className="ml-2 font-medium text-[var(--text-white)]">v{appVersion}</span>
+                </div>
                 <div className="rounded-full border border-[var(--border)] bg-[var(--bg-input)]/80 px-3 py-2 text-xs text-[var(--text-secondary)]">
                   Current route
                   <span className="ml-2 font-medium text-[var(--text-white)]">{location.pathname}</span>
