@@ -69,7 +69,7 @@ target-version = ["py312"]
 
 [tool.ruff]
 line-length = 100
-target-version = "1.0.0"
+target-version = "py312"
 [tool.ruff.lint]
 select = [
     "E",
@@ -84,7 +84,7 @@ exclude = [".venv", "venv", ".git", "__pycache__"]
 include = ["app*"]
 
 [tool.mypy]
-python_version = "1.0.0"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
