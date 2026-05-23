@@ -1,37 +1,91 @@
-# Production overrides for docker-compose.yml
-# NOTE: for a clean production run (pre-built images, no source mounts)
-# use docker-compose.deploy.yml directly via: mise run dkr:prod
-#
-# This file is useful for switching restart policies and images
-# on an existing dev stack without recreating volumes.
-#
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+version: '3.8'
 
 services:
-  api:
-    image: ghcr.io/syncdoc-dev/syncdoc/api:latest
-    restart: always
-    environment:
-      ENVIRONMENT: production
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
-
-  worker:
-    image: ghcr.io/syncdoc-dev/syncdoc/api:latest
-    restart: always
-    environment:
-      ENVIRONMENT: production
-    command: celery -A app.celery_app worker --loglevel=info --concurrency 4
-
-  frontend:
-    image: ghcr.io/syncdoc-dev/syncdoc/frontend:latest
-    restart: always
-    ports:
-      - "${FRONTEND_PORT:-5174}:80"
-    volumes: null
-    command: null
-
   postgres:
-    restart: always
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-syncdoc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-syncdoc}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-syncdoc} -d ${POSTGRES_DB:-syncdoc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   redis:
-    restart: always
+    image: redis:8-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "-a", "${REDIS_PASSWORD:-}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-syncdoc}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-syncdoc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      ENVIRONMENT: production
+      PYTHONUNBUFFERED: "1"
+      # Add other production environment variables here from .env or ENV_VARS.md
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-syncdoc}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-syncdoc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      ENVIRONMENT: production
+      PYTHONUNBUFFERED: "1"
+      # Add other production environment variables here from .env or ENV_VARS.md
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A app.celery_app worker --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-https://your-domain.com}  # Set to your actual domain
+    ports:
+      - "80:80"  # Standard HTTP port
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
