@@ -26,15 +26,15 @@ jobs:
       DO_PUSH: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.push_images == 'true' }}
       IMAGE_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_HUB_USERNAME || 'syncdocdev' }}
     
-    strategy:
-      matrix:
-        include:
-          - context: backend
-            image_suffix: syncdoc-api
-            dockerfile: Dockerfile
-          - context: frontend
-            image_suffix: syncdoc-frontend
-            dockerfile: Dockerfile
+strategy:
+  matrix:
+    include:
+      - context: backend
+        image_suffix: syncdoc-api
+        dockerfile: Dockerfile.prod
+      - context: frontend
+        image_suffix: syncdoc-frontend
+        dockerfile: Dockerfile.prod
 
     steps:
       - uses: actions/checkout@v6

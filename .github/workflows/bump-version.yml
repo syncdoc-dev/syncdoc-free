@@ -1,0 +1,119 @@
+name: Bump Version and Create Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump-type:
+        description: 'Type of version bump (major, minor, patch)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      branch:
+        description: 'Branch to bump version on (default: main)'
+        required: false
+        default: 'main'
+        type: string
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0  # Need full history for tagging
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          
+      - name: Extract current version
+        id: extract_version
+        run: |
+          # Extract version from pyproject.toml
+          VERSION=$(grep -oP '(?<=version = ")[^"]+' backend/pyproject.toml)
+          echo "Current version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Bump version
+        id: bump_version
+        run: |
+          CURRENT_VERSION=${{ steps.extract_version.outputs.version }}
+          BUMP_TYPE=${{ inputs.bump-type }}
+          
+          # Split version into components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # Bump based on type
+          if [ "$BUMP_TYPE" = "major" ]; then
+            NEW_MAJOR=$((MAJOR + 1))
+            NEW_MINOR=0
+            NEW_PATCH=0
+          elif [ "$BUMP_TYPE" = "minor" ]; then
+            NEW_MAJOR=$MAJOR
+            NEW_MINOR=$((MINOR + 1))
+            NEW_PATCH=0
+          else # patch
+            NEW_MAJOR=$MAJOR
+            NEW_MINOR=$MINOR
+            NEW_PATCH=$((PATCH + 1))
+          fi
+          
+          NEW_VERSION="${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Update pyproject.toml
+        run: |
+          NEW_VERSION=${{ steps.bump_version.outputs.version }}
+          # Update version in pyproject.toml
+          sed -i 's/version = ".*"/version = "'"$NEW_VERSION"'"/' backend/pyproject.toml
+          echo "Updated backend/pyproject.toml to version $NEW_VERSION"
+          
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+      - name: Commit changes
+        run: |
+          git add backend/pyproject.toml
+          git commit -m "chore: bump version to ${{ steps.bump_version.outputs.version }} [skip ci]"
+          
+      - name: Create tag
+        run: |
+          NEW_VERSION=${{ steps.bump_version.outputs.version }}
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          
+      - name: Push changes and tag
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ inputs.branch }}
+          tags: true
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/heads/')
+        with:
+          tag_name: v${{ steps.bump_version.outputs.version }}
+          name: Release v${{ steps.bump_version.outputs.version }}
+          body: |
+            Automatic release bumped via workflow.
+            
+            Changes:
+            - Version bumped to ${{ steps.bump_version.outputs.version }} (${{ inputs.bump-type }})
+            
+            [Skip CI] to avoid triggering other workflows on the commit.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
