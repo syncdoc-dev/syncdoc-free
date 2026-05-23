@@ -125,7 +125,7 @@ services:
     environment:
       VITE_API_URL: https://your-domain.com  # Set to your actual domain
     ports:
-      - "5173:80"  # Serving on port 80 via nginx in container
+      - "80:8080"  # Serving on port 8080 via nginx in container
     depends_on:
       api:
         condition: service_started
@@ -189,7 +189,7 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Run application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

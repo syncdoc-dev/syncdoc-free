@@ -60,12 +60,12 @@ services:
       - postgres
       - redis
 
-  frontend:
+    frontend:
     image: syncdocdev/syncdoc-frontend:latest
     environment:
       VITE_API_URL: https://api.yourdomain.com
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
       - api
 
@@ -226,4 +226,4 @@ SyncDoc Docker images are licensed under the Apache License 2.0. See the [LICENS
 
 ---
 
-*Last updated: $(date +%Y-%m-%d)*
+*Last updated: March 15, 2025*
