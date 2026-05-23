@@ -75,7 +75,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  api:
+    api:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
@@ -90,8 +90,6 @@ services:
       # Add other production environment variables here
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app:ro  # Read-only mount for security
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,9 +109,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
       ENVIRONMENT: production
       PYTHONUNBUFFERED: "1"
-      # Add other production environment variables here
-    volumes:
-      - ./backend:/app:ro  # Read-only mount for security
+      # Add other production environment variables here from .env or ENV_VARS.md
     depends_on:
       postgres:
         condition: service_healthy

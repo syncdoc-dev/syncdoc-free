@@ -63,7 +63,7 @@ services:
   frontend:
     image: syncdocdev/syncdoc-frontend:latest
     environment:
-      VITE_API_URL: http://localhost:8000
+      VITE_API_URL: https://api.yourdomain.com
     ports:
       - "80:80"
     depends_on:
