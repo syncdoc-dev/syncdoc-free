@@ -48,6 +48,9 @@ The production compose file pulls these images by default:
 - `syncdocdev/syncdoc-api:latest`
 - `syncdocdev/syncdoc-frontend:latest`
 
+The Docker Hub overview for each image is synced from this README during publish
+when `DOCKERHUB_DESCRIPTION_TOKEN` has repository metadata/write permission.
+
 To pin to a branch or release tag, set image variables before starting:
 
 ```bash

@@ -82,13 +82,13 @@ jobs:
         shell: bash
         env:
           IMAGE_REPOSITORY: ${{ matrix.image_suffix }}
-          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_HUB_TOKEN }}
+          DOCKERHUB_OVERVIEW_PASSWORD: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN || secrets.DOCKERHUB_TOKEN || secrets.DOCKER_HUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          if [ -z "${DOCKERHUB_PASSWORD}" ]; then
-            echo "DOCKERHUB_TOKEN or DOCKER_HUB_TOKEN is required to update Docker Hub overview"
-            exit 1
+          if [ -z "${DOCKERHUB_OVERVIEW_PASSWORD}" ]; then
+            echo "::warning::Skipping Docker Hub overview sync because no Docker Hub token is configured"
+            exit 0
           fi
 
           DESCRIPTION="Infrastructure-as-code living documentation for Terraform, Docker, and Ansible"
@@ -98,7 +98,7 @@ jobs:
 
           TOKEN=$(jq -n \
             --arg username "${IMAGE_NAMESPACE}" \
-            --arg password "${DOCKERHUB_PASSWORD}" \
+            --arg password "${DOCKERHUB_OVERVIEW_PASSWORD}" \
             '{username: $username, password: $password}' \
             | curl -fsSL \
                 -H "Content-Type: application/json" \
@@ -107,8 +107,8 @@ jobs:
             | jq -r '.token // .access_token // empty')
 
           if [ -z "${TOKEN}" ]; then
-            echo "Docker Hub login did not return an API token"
-            exit 1
+            echo "::warning::Docker Hub login did not return an API token; skipping overview sync"
+            exit 0
           fi
 
           patch_repository() {
@@ -142,7 +142,8 @@ jobs:
 
           echo "Failed to update Docker Hub overview for ${IMAGE_NAMESPACE}/${IMAGE_REPOSITORY}"
           cat /tmp/dockerhub-response.json
-          exit 1
+          echo "::warning::Docker Hub overview sync failed. Use a Docker Hub token with repository metadata/write permission in DOCKERHUB_DESCRIPTION_TOKEN to enable README sync."
+          exit 0
 
       - name: Build only
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.push_images == 'false'
