@@ -153,7 +153,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY backend/pyproject.toml backend/uv.lock ./
-RUN pip install --no-cache-dir -e ".[dev]"
+RUN pip install --no-cache-dir .
 
 # Production stage
 FROM python:3.12-slim
