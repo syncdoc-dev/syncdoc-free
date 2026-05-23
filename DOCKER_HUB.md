@@ -43,7 +43,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
-    image: redis:8-alpine
+    image: redis:7-alpine
     volumes:
       - redis_data:/data
 
@@ -118,7 +118,7 @@ For quick testing:
 ```bash
 # Start dependencies
 docker run -d --name postgres -e POSTGRES_USER=syncdoc -e POSTGRES_PASSWORD=syncdoc_dev -e POSTGRES_DB=syncdoc pgvector/pgvector:pg16
-docker run -d --name redis redis:8-alpine
+docker run -d --name redis redis:7-alpine
 
 # Start API
 docker run -d --name syncdoc-api \

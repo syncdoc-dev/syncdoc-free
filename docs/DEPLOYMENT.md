@@ -75,7 +75,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-    api:
+  api:
     build:
       context: ./backend
       dockerfile: Dockerfile.prod
@@ -127,7 +127,7 @@ services:
     ports:
       - "80:8080"  # Serving on port 8080 via nginx in container
     depends_on:
-      api:
+    api:
         condition: service_started
     restart: unless-stopped
 
