@@ -38,8 +38,8 @@ jobs:
       - name: Extract current version
         id: extract_version
         run: |
-          # Extract version from pyproject.toml
-          VERSION=$(grep -oP '(?<=version = ")[^"]+' backend/pyproject.toml)
+          # Use Python to reliably extract version from pyproject.toml
+          VERSION=$(python3 -c "import re; print(re.search(r'version = \"([^\"]+)\\\"', open('backend/pyproject.toml').read()).group(1))" 2>/dev/null || python3 -c "import re; print(re.search(r'version = \"([^\"]+)\\\"', open('backend/pyproject.toml').read()).group(1))")
           echo "Current version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
