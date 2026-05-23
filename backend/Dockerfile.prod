@@ -1,5 +1,5 @@
 # Multi-stage build for smaller, secure production image
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,6 +23,7 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
