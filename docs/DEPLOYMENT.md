@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:8-alpine
+    image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD:-}
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
