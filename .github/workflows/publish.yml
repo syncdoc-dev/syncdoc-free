@@ -87,3 +87,80 @@ jobs:
           build-args: |
             APP_VERSION=${{ github.sha }}
           tags: docker.io/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image_suffix }}:dry-run
+
+  update-dockerhub-overview:
+    name: Update Docker Hub Overview
+    runs-on: ubuntu-latest
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.push_images == 'true'
+    env:
+      IMAGE_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_HUB_USERNAME || 'syncdocdev' }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_HUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Sync README to Docker Hub overviews
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DOCKERHUB_PASSWORD}" ]; then
+            echo "DOCKERHUB_TOKEN or DOCKER_HUB_TOKEN is required to update Docker Hub overview"
+            exit 1
+          fi
+
+          DESCRIPTION="Infrastructure-as-code living documentation for Terraform, Docker, and Ansible"
+          BODY=$(jq -Rs --arg description "$DESCRIPTION" \
+            '{description: $description, full_description: .}' README.md)
+          printf '%s' "${BODY}" > /tmp/dockerhub-overview.json
+
+          TOKEN=$(jq -n \
+            --arg username "${IMAGE_NAMESPACE}" \
+            --arg password "${DOCKERHUB_PASSWORD}" \
+            '{username: $username, password: $password}' \
+            | curl -fsSL \
+                -H "Content-Type: application/json" \
+                -d @- \
+                https://hub.docker.com/v2/users/login/ \
+            | jq -r '.token // .access_token // empty')
+
+          if [ -z "${TOKEN}" ]; then
+            echo "Docker Hub login did not return an API token"
+            exit 1
+          fi
+
+          patch_repository() {
+            local endpoint="$1"
+            local auth_header="$2"
+            local status
+
+            status=$(curl -sS \
+              -o /tmp/dockerhub-response.json \
+              -w "%{http_code}" \
+              -X PATCH "${endpoint}" \
+              -H "${auth_header}" \
+              -H "Content-Type: application/json" \
+              -d @/tmp/dockerhub-overview.json)
+
+            [[ "${status}" =~ ^2 ]]
+          }
+
+          for repo in syncdoc-api syncdoc-frontend; do
+            echo "Updating Docker Hub overview for ${IMAGE_NAMESPACE}/${repo}"
+            if patch_repository \
+              "https://hub.docker.com/v2/namespaces/${IMAGE_NAMESPACE}/repositories/${repo}" \
+              "Authorization: Bearer ${TOKEN}"; then
+              continue
+            fi
+
+            if patch_repository \
+              "https://hub.docker.com/v2/repositories/${IMAGE_NAMESPACE}/${repo}/" \
+              "Authorization: JWT ${TOKEN}"; then
+              continue
+            fi
+
+            echo "Failed to update Docker Hub overview for ${IMAGE_NAMESPACE}/${repo}"
+            cat /tmp/dockerhub-response.json
+            exit 1
+          done

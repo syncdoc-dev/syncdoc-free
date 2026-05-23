@@ -11,7 +11,68 @@ SyncDoc is an infrastructure-as-code (IaC) documentation tool that generates liv
 - **Modern UI** - React + TypeScript frontend
 - **Extensible** - Built with connectors pattern for custom sources
 
-## Quick Start
+## Quick Start from Docker Hub
+
+### Prerequisites
+
+- Docker & Docker Compose
+- A 32+ character `JWT_SECRET_KEY` for production or shared deployments
+
+### Run the Published Images
+
+The easiest way to run SyncDoc is with the published Docker Hub images:
+
+```bash
+git clone https://github.com/syncdoc-dev/syncdoc-free.git
+cd syncdoc-free
+
+# Copy and configure the environment
+cp .env.example .env
+
+# Required for production or shared deployments:
+# paste this value into JWT_SECRET_KEY in .env
+openssl rand -hex 32
+
+# Start all services
+docker compose -f docker-compose.prod.yml up -d
+```
+
+The application will be available at:
+- **Frontend**: http://localhost:5174
+- **API**: http://localhost:8001
+- **API Docs**: http://localhost:8001/docs
+- **Health check**: http://localhost:5174/api/health
+
+The production compose file pulls these images by default:
+
+- `syncdocdev/syncdoc-api:latest`
+- `syncdocdev/syncdoc-frontend:latest`
+
+To pin to a branch or release tag, set image variables before starting:
+
+```bash
+SYNC_DOC_API_IMAGE=syncdocdev/syncdoc-api:main \
+SYNC_DOC_FRONTEND_IMAGE=syncdocdev/syncdoc-frontend:main \
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Useful operations:
+
+```bash
+# Check service health
+docker compose -f docker-compose.prod.yml ps
+
+# Tail logs
+docker compose -f docker-compose.prod.yml logs -f api frontend worker
+
+# Stop the stack
+docker compose -f docker-compose.prod.yml down
+
+# Stop and remove PostgreSQL/Redis volumes
+docker compose -f docker-compose.prod.yml down -v
+```
+
+## Local Development
 
 ### Prerequisites
 
@@ -19,22 +80,18 @@ SyncDoc is an infrastructure-as-code (IaC) documentation tool that generates liv
 - Python 3.12+ (for local backend development)
 - Node.js 20+ (for local frontend development)
 
-### Run Locally with Docker Compose
+### Run the Development Stack
 
-The easiest way to run SyncDoc locally is with Docker Compose:
+For local development with bind-mounted source code:
 
 ```bash
 git clone https://github.com/syncdoc-dev/syncdoc-free.git
 cd syncdoc-free
-
-# Copy and configure the environment (optional)
 cp .env.example .env
-
-# Start all services
-docker-compose up
+docker compose up
 ```
 
-The application will be available at:
+The development application will be available at:
 - **Frontend**: http://localhost:5173
 - **API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
@@ -230,16 +287,12 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 [See LICENSE file](LICENSE)
 
-## Deployment
-
-For production deployments, see the deployment guide in the private repository (for SyncDoc maintainers only).
-
 ## Troubleshooting
 
 ### Docker Compose Issues
 
 ```bash
-# Rebuild images after code changes
+# Rebuild development images after code changes
 docker-compose up --build
 
 # View logs
