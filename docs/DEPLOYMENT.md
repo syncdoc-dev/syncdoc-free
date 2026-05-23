@@ -199,7 +199,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ```dockerfile
 # Build stage
-FROM node:24-alpine as builder
+FROM node:22-alpine as builder
 
 WORKDIR /app
 
