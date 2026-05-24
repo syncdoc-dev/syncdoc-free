@@ -21,9 +21,11 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import ThemeSwitcher from "./ThemeSwitcher";
+import DemoBanner from "./DemoBanner";
 import { useAuth } from "../context/AuthContext";
 import { getProjectId, getProjects, setProjectId } from "../api/client";
 import { useSyncEvents } from "../hooks/useSyncEvents";
+import { useConfig } from "../hooks/useConfig";
 import type { Project } from "../types";
 
 const NAV = [
@@ -151,9 +153,11 @@ export default function Layout() {
   });
 
   const pageMeta = getPageMeta(location.pathname);
+  const { config } = useConfig();
 
   return (
     <div className="app-shell">
+      <DemoBanner credentials={config?.demo_credentials ?? null} />
       {mobileOpen && (
         <button
           type="button"

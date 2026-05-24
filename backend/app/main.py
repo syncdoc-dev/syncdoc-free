@@ -4,12 +4,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
 
 from app.api import (
     admin,
     analytics,
     api_keys,
     capabilities,
+    config,
     credentials,
     drift,
     graph,
@@ -27,7 +29,9 @@ from app.api import (
 )
 from app.api.auth import router as auth_router
 from app.core.config import get_settings
-from app.core.database import init_db
+from app.core.database import init_db, get_session_factory
+from app.core.security import hash_password
+from app.models.user import User
 
 
 @asynccontextmanager
@@ -36,6 +40,30 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting SyncDoc API")
     await init_db()
+
+    # Seed demo user when in demo mode
+    settings = get_settings()
+    if settings.demo_mode:
+        print("🎨 Demo mode active — ensuring demo user exists")
+        async with get_session_factory()() as db:
+            result = await db.execute(
+                select(User).where(User.login == settings.demo_username)
+            )
+            existing = result.scalar_one_or_none()
+            if not existing:
+                user = User(
+                    login=settings.demo_username,
+                    email=f"{settings.demo_username}@demo.syncdoc.dev",
+                    name="Demo User",
+                    password_hash=hash_password(settings.demo_password),
+                    auth_provider="local",
+                )
+                db.add(user)
+                await db.commit()
+                print(f"✅ Created demo user: {settings.demo_username}")
+            else:
+                print(f"✅ Demo user already exists: {settings.demo_username}")
+
     yield
     # Shutdown
     print("🛑 Shutting down SyncDoc API")
@@ -60,6 +88,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(config.router, prefix="/api", tags=["config"])
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(analytics.router, prefix="/api", tags=["analytics"])

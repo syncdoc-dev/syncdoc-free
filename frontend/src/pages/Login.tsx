@@ -1,14 +1,16 @@
 import { Github, Loader } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch, getApiBase } from "../api/client";
+import { useConfig } from "../hooks/useConfig";
 
 type AuthMode = "login" | "register";
 
 export default function Login() {
   const navigate = useNavigate();
   const { setToken } = useAuth();
+  const { config } = useConfig();
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,6 +21,23 @@ export default function Login() {
     name: "",
     marketing_opt_in: false,
   });
+
+  // Pre-fill demo credentials once when in demo mode
+  useEffect(() => {
+    if (
+      config?.demo_mode &&
+      config.demo_credentials &&
+      !formData.login &&
+      !formData.password
+    ) {
+      setFormData({
+        ...formData,
+        login: config.demo_credentials.username,
+        password: config.demo_credentials.password,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value =
@@ -96,6 +115,27 @@ export default function Login() {
           <p className="text-sm text-[var(--text-secondary)] text-center mb-6">
             Infrastructure-aware living documentation for your team
           </p>
+
+          {config?.demo_mode && config.demo_credentials && (
+            <div className="mb-6 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+              <p className="text-xs font-medium text-amber-300 mb-1">
+                🎨 Demo Environment
+              </p>
+              <p className="text-xs text-amber-200/80">
+                Data resets every 30 minutes
+              </p>
+              <p className="mt-2 text-xs text-amber-200">
+                Try it with{" "}
+                <code className="bg-amber-500/20 px-1 rounded font-mono">
+                  {config.demo_credentials.username}
+                </code>
+                /
+                <code className="bg-amber-500/20 px-1 rounded font-mono">
+                  {config.demo_credentials.password}
+                </code>
+              </p>
+            </div>
+          )}
 
           {/* Tabs */}
           <div className="flex gap-2 mb-6 border-b border-[var(--border)]">

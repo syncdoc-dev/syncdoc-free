@@ -94,6 +94,16 @@ class Settings(BaseSettings):
     license_enforcement_enabled: bool = False
     license_allow_unsigned_dev: bool = True
 
+    # Demo mode
+    app_mode: str = Field(default="app")
+    demo_username: str = Field(default="syncdoc")
+    demo_password: str = Field(default="syncdoc123")
+
+
+    @property
+    def demo_mode(self) -> bool:
+        return self.app_mode == "demo"
+
 
 _settings: Settings | None = None
 
