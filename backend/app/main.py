@@ -29,7 +29,7 @@ from app.api import (
 )
 from app.api.auth import router as auth_router
 from app.core.config import get_settings
-from app.core.database import init_db, get_session_factory
+from app.core.database import get_session_factory, init_db
 from app.core.security import hash_password
 from app.models.user import User
 
