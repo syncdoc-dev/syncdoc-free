@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: syncdoc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-syncdoc_dev}
+      POSTGRES_DB: syncdoc
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U syncdoc -d syncdoc"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: ${SYNCDOC_API_IMAGE:-syncdocdev/syncdoc-api:latest}
+    environment:
+      DATABASE_URL: postgresql+asyncpg://syncdoc:${POSTGRES_PASSWORD:-syncdoc_dev}@postgres:5432/syncdoc
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      PYTHONUNBUFFERED: "1"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8000}
+      ALLOW_SELF_REGISTER: ${ALLOW_SELF_REGISTER:-true}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 120
+
+  worker:
+    image: ${SYNCDOC_API_IMAGE:-syncdocdev/syncdoc-api:latest}
+    environment:
+      DATABASE_URL: postgresql+asyncpg://syncdoc:${POSTGRES_PASSWORD:-syncdoc_dev}@postgres:5432/syncdoc
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      PYTHONUNBUFFERED: "1"
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.celery_app worker --loglevel=info --concurrency 4
+
+  frontend:
+    image: ${SYNCDOC_FRONTEND_IMAGE:-syncdocdev/syncdoc-frontend:latest}
+    environment:
+      VITE_API_URL: http://localhost:8000/api
+    ports:
+      - "5173:8080"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
