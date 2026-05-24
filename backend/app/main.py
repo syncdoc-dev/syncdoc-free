@@ -46,9 +46,7 @@ async def lifespan(app: FastAPI):
     if settings.demo_mode:
         print("🎨 Demo mode active — ensuring demo user exists")
         async with get_session_factory()() as db:
-            result = await db.execute(
-                select(User).where(User.login == settings.demo_username)
-            )
+            result = await db.execute(select(User).where(User.login == settings.demo_username))
             existing = result.scalar_one_or_none()
             if not existing:
                 user = User(

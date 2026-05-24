@@ -99,7 +99,6 @@ class Settings(BaseSettings):
     demo_username: str = Field(default="syncdoc")
     demo_password: str = Field(default="syncdoc123")
 
-
     @property
     def demo_mode(self) -> bool:
         return self.app_mode == "demo"
