@@ -106,15 +106,15 @@ def _parse_datetime(value: Any) -> datetime | None:
 
 def _base_entitlements(
     *,
-    plan: str = "free",
-    status: str = "missing",
+    plan: str = "open_source",
+    status: str = "active",
     issued_at: datetime | None = None,
     expires_at: datetime | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> Entitlements:
     settings = get_settings()
-    features = PLAN_FEATURES.get(plan) or set()
-    limits = PLAN_LIMITS.get(plan, DEFAULT_FREE_LIMITS)
+    features = PLAN_FEATURES.get(plan) or PLAN_FEATURES["enterprise"]
+    limits = PLAN_LIMITS.get(plan, ENTERPRISE_LIMITS)
     return Entitlements(
         plan=plan,
         status=status,

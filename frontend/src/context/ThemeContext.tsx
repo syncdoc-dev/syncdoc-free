@@ -28,8 +28,6 @@ export const THEMES: ThemeMeta[] = [
   { id: "gruvbox", label: "Gruvbox Dark", swatch: "#fe8019" },
 ];
 
-const FREE_THEME_IDS: ThemeId[] = ["original", "original_light"];
-
 interface ThemeContextValue {
   theme: ThemeId;
   setTheme: (id: ThemeId) => void;
@@ -50,19 +48,12 @@ function getStorageKey(userId: string | number | null | undefined) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const { user, token, entitlements } = useAuth();
+  const { user, token } = useAuth();
   const storageKey = getStorageKey(user?.id);
   const [theme, setThemeState] = useState<ThemeId>("original");
-  const entitlementsLoaded = entitlements !== null;
-  const isFreePlan = entitlementsLoaded && entitlements.plan === "free";
-  const availableThemes = isFreePlan
-    ? THEMES.filter((themeMeta) => FREE_THEME_IDS.includes(themeMeta.id))
-    : THEMES;
+  const availableThemes = THEMES;
 
-  const isThemeLocked = useCallback(
-    (id: ThemeId) => isFreePlan && !FREE_THEME_IDS.includes(id),
-    [isFreePlan]
-  );
+  const isThemeLocked = useCallback((_id: ThemeId) => false, []);
 
   const setTheme = useCallback((id: ThemeId) => {
     if (isThemeLocked(id)) {
@@ -80,18 +71,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
-
-  useEffect(() => {
-    if (!entitlementsLoaded) return;
-    if (isThemeLocked(theme)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setThemeState("original");
-      localStorage.setItem(storageKey, "original");
-      if (token) {
-        updateMe({ theme_id: "original" }).catch(() => {});
-      }
-    }
-  }, [entitlementsLoaded, isThemeLocked, storageKey, theme, token]);
 
   useEffect(() => {
     if (isValidTheme(user?.theme_id)) {

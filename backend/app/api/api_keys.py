@@ -13,7 +13,6 @@ from app.core.deps import CurrentContext
 from app.core.rbac import require_role
 from app.models.api_key import ApiKey
 from app.models.user import User
-from app.services.entitlements import LIMIT_API_KEYS, assert_limit, count_api_keys_for_user
 
 router = APIRouter(tags=["api_keys"])
 
@@ -52,12 +51,6 @@ async def create_api_key(
     db: AsyncSession = Depends(get_db),
 ) -> ApiKeyWithSecret:
     """Create a new API key for programmatic access."""
-    await assert_limit(
-        ctx.organization_id,
-        LIMIT_API_KEYS,
-        await count_api_keys_for_user(ctx.user.id, db),
-        db,
-    )
     full_key, prefix = ApiKey.generate_key()
     key_hash = ApiKey.hash_key(full_key)
 

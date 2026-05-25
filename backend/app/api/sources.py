@@ -25,7 +25,6 @@ from app.schemas.source import (
     SourceInspectRequest,
     SourceResponse,
 )
-from app.services.entitlements import LIMIT_SOURCES, assert_limit, count_sources
 from app.services.source_inspection import inspect_source
 
 router = APIRouter()
@@ -57,12 +56,6 @@ async def create_source(
     db: AsyncSession = Depends(get_db),
 ):
     """Register a new IaC source"""
-    await assert_limit(
-        ctx.organization_id,
-        LIMIT_SOURCES,
-        await count_sources(ctx.organization_id, db),
-        db,
-    )
     valid_types = list_connectors()
     if source.type not in valid_types:
         raise HTTPException(

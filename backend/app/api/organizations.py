@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.deps import CurrentContext
 from app.core.rbac import require_role
@@ -19,7 +20,6 @@ from app.schemas.organization import (
     OrgMemberRoleUpdate,
     OrgUserCreate,
 )
-from app.services.entitlements import LIMIT_USERS, assert_limit, count_users
 
 router = APIRouter(prefix="/orgs", tags=["orgs"])
 
@@ -81,12 +81,6 @@ async def create_user(
     ctx: CurrentContext = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_limit(
-        ctx.organization_id,
-        LIMIT_USERS,
-        await count_users(ctx.organization_id, db),
-        db,
-    )
     existing = await db.execute(select(User).where(User.login == payload.login))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Login already exists")
@@ -97,6 +91,14 @@ async def create_user(
 
     if ctx.role != "owner" and payload.role in {"admin", "owner"}:
         raise HTTPException(status_code=403, detail="Only owners can assign admin/owner role")
+
+    # Hosted mode: only the designated owner can be owner; everyone else is capped at admin
+    settings = get_settings()
+    if settings.owner_login and payload.role == "owner" and payload.login != settings.owner_login:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the designated owner account can hold the owner role",
+        )
 
     user = User(
         login=payload.login,
@@ -148,6 +150,19 @@ async def update_member_role(
     if ctx.role != "owner" and payload.role in {"admin", "owner"}:
         raise HTTPException(status_code=403, detail="Only owners can assign admin/owner role")
 
+    # Hosted mode: protect the designated owner
+    settings = get_settings()
+    if settings.owner_login:
+        if user.login == settings.owner_login and payload.role != "owner":
+            raise HTTPException(
+                status_code=403, detail="Cannot change the designated owner's role",
+            )
+        if payload.role == "owner" and user.login != settings.owner_login:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the designated owner account can hold the owner role",
+            )
+
     if membership.role == "owner" and payload.role != "owner":
         owner_count = await db.scalar(
             select(func.count(OrganizationMembership.id)).where(
@@ -194,6 +209,11 @@ async def delete_user(
 
     if ctx.role != "owner" and membership.role in {"admin", "owner"}:
         raise HTTPException(status_code=403, detail="Only owners can delete admin/owner users")
+
+    # Hosted mode: cannot delete the designated owner
+    settings = get_settings()
+    if settings.owner_login and user.login == settings.owner_login:
+        raise HTTPException(status_code=403, detail="Cannot delete the designated owner")
 
     if membership.role == "owner":
         owner_count = await db.scalar(

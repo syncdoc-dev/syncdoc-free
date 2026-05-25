@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     license_enforcement_enabled: bool = False
     license_allow_unsigned_dev: bool = True
 
+    # Role hierarchy
+    owner_login: str | None = None  # If set, this login is the sole owner (hosted mode)
+
     # Demo mode
     app_mode: str = Field(default="app")
     demo_username: str = Field(default="syncdoc")
@@ -102,6 +105,10 @@ class Settings(BaseSettings):
     @property
     def demo_mode(self) -> bool:
         return self.app_mode == "demo"
+
+    @property
+    def hosted_mode(self) -> bool:
+        return self.owner_login is not None
 
 
 _settings: Settings | None = None

@@ -32,8 +32,8 @@ async def get_license_record(
     if record is None:
         return LicenseRecordResponse(
             organization_id=ctx.organization_id,
-            plan="free",
-            status="missing",
+            plan="open_source",
+            status="active",
             enforcement_enabled=settings.license_enforcement_enabled,
         )
     return LicenseRecordResponse(

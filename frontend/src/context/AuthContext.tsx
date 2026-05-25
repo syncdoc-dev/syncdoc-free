@@ -67,15 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
-  const hasFeature = useCallback(
-    (feature: string) => Boolean(entitlements?.features.includes(feature)),
-    [entitlements]
-  );
+  const hasFeature = useCallback(() => true, []);
 
-  const getLimit = useCallback(
-    (limitName: string) => entitlements?.limits[limitName] ?? null,
-    [entitlements]
-  );
+  const getLimit = useCallback(() => null, []);
 
   useEffect(() => {
     if (!token) {

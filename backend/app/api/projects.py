@@ -12,7 +12,6 @@ from app.core.deps import CurrentContext
 from app.core.rbac import require_role
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectResponse
-from app.services.entitlements import LIMIT_PROJECTS, assert_limit, count_projects
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -36,12 +35,6 @@ async def create_project(
     ctx: CurrentContext = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_limit(
-        ctx.organization_id,
-        LIMIT_PROJECTS,
-        await count_projects(ctx.organization_id, db),
-        db,
-    )
     existing = await db.execute(
         select(Project).where(
             Project.organization_id == ctx.organization_id, Project.name == payload.name

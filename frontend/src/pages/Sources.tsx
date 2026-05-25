@@ -30,7 +30,6 @@ import {
 } from "../api/client";
 import type { AppSettings, Source, SourceInspection } from "../types";
 import { useAuth } from "../context/AuthContext";
-import UpgradeBadge from "../components/UpgradeBadge";
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   terraform: Database,
@@ -91,7 +90,7 @@ const SOURCE_TYPE_INFO: Record<
 type CredentialSummary = { id: string; credential_type: string; created_at: string };
 
 export default function Sources() {
-  const { user, entitlements, hasFeature, getLimit } = useAuth();
+  const { user } = useAuth();
   const canEdit = user?.role !== "viewer";
   const [sources, setSources] = useState<Source[]>([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -115,9 +114,6 @@ export default function Sources() {
   const [addingSource, setAddingSource] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
-  const sourceLimit = getLimit("sources");
-  const sourceLimitReached = sourceLimit !== null && sources.length >= sourceLimit;
-  const aiDocsLicensed = hasFeature("ai_docs");
   const selectedTypeInfo = SOURCE_TYPE_INFO[form.type] ?? SOURCE_TYPE_INFO.terraform;
   const canCheckSource = form.url.trim().length > 0;
 
@@ -334,29 +330,20 @@ export default function Sources() {
       ),
     [syncRuns]
   );
-  const docsGenerationAvailable = Boolean(appSettings?.llm_api_key) && aiDocsLicensed;
+  const docsGenerationAvailable = Boolean(appSettings?.llm_api_key);
 
   return (
     <>
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[var(--text-white)]">Sources</h1>
-            {sourceLimitReached && <UpgradeBadge />}
-          </div>
+          <h1 className="text-2xl font-bold text-[var(--text-white)]">Sources</h1>
           <p className="mt-1 text-[var(--text-secondary)]">Manage your IaC source repositories</p>
-          {sourceLimit !== null && (
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
-              {sources.length}/{sourceLimit} sources on the {entitlements?.plan ?? "free"} plan
-            </p>
-          )}
         </div>
         {canEdit && (
           <button
             onClick={() => setShowAdd(!showAdd)}
-            disabled={sourceLimitReached}
-            className="flex items-center gap-2 rounded-lg bg-[var(--accent-strong)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-            title={sourceLimitReached ? "Upgrade license to add more sources" : "Add Source"}
+            className="flex items-center gap-2 rounded-lg bg-[var(--accent-strong)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+            title="Add Source"
           >
             <Plus className="h-4 w-4" />
             Add Source
@@ -367,11 +354,6 @@ export default function Sources() {
       {canEdit && showAdd && (
         <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
           <h3 className="mb-4 font-medium text-[var(--text-white)]">New Source</h3>
-          {sourceLimitReached && (
-            <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              This license has reached its source limit. Upgrade the license to add more sources.
-            </div>
-          )}
 
           <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4">
             <div className="flex items-center gap-2">
@@ -390,7 +372,7 @@ export default function Sources() {
               value={form.type}
               onChange={(e) => setForm({ ...form, type: e.target.value })}
               className="rounded-lg border border-[var(--border-light)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-strong)] focus:outline-none"
-              disabled={sourceLimitReached || addingSource}
+              disabled={addingSource}
             >
               {["terraform", "docker", "ansible", "git"].map((t) => (
                 <option key={t} value={t}>
@@ -405,7 +387,7 @@ export default function Sources() {
               onChange={(e) => setForm({ ...form, url: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && void handleAdd()}
               className="flex-1 rounded-lg border border-[var(--border-light)] bg-[var(--bg-input)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-strong)] focus:outline-none"
-              disabled={sourceLimitReached || addingSource}
+              disabled={addingSource}
             />
             <button
               onClick={() => void handleInspect()}
@@ -421,7 +403,7 @@ export default function Sources() {
             </button>
             <button
               onClick={() => void handleAdd()}
-              disabled={!canEdit || sourceLimitReached || addingSource}
+              disabled={!canEdit || addingSource}
               className="rounded-lg bg-[var(--accent-strong)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               title={canEdit ? "Add" : "Insufficient role"}
             >

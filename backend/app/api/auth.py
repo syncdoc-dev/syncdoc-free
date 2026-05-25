@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.rbac import create_personal_org_membership, ensure_membership
+from app.core.rbac import ensure_membership
 from app.core.security import (
     create_access_token,
     decode_access_token,
@@ -147,7 +147,7 @@ async def register(
 
     background_tasks.add_task(safe_send_registration_emails, user, source="local_register")
 
-    membership = await create_personal_org_membership(db, user.id, org_name=f"{user.login}'s Org")
+    membership = await ensure_membership(db, user.id)
 
     # Issue JWT
     jwt_token = create_access_token(
@@ -190,12 +190,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> dict:
     if not user or not user.password_hash or not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    try:
-        membership = await ensure_membership(db, user.id, create_if_missing=False)
-    except HTTPException:
-        membership = await create_personal_org_membership(
-            db, user.id, org_name=f"{user.login}'s Org"
-        )
+    membership = await ensure_membership(db, user.id)
 
     # Issue JWT
     jwt_token = create_access_token(
@@ -322,12 +317,7 @@ async def github_callback(
     if is_new_user:
         background_tasks.add_task(safe_send_registration_emails, user, source="github_oauth")
 
-    try:
-        membership = await ensure_membership(db, user.id, create_if_missing=False)
-    except HTTPException:
-        membership = await create_personal_org_membership(
-            db, user.id, org_name=f"{user.login}'s Org"
-        )
+    membership = await ensure_membership(db, user.id)
 
     # Issue JWT
     jwt_token = create_access_token(
@@ -363,12 +353,7 @@ async def get_me(request: Request, db: AsyncSession = Depends(get_db)) -> dict[s
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    try:
-        membership = await ensure_membership(db, user.id, create_if_missing=False)
-    except HTTPException:
-        membership = await create_personal_org_membership(
-            db, user.id, org_name=f"{user.login}'s Org"
-        )
+    membership = await ensure_membership(db, user.id)
 
     return {
         "id": user.id,
@@ -415,12 +400,7 @@ async def update_me(
     await db.commit()
     await db.refresh(user)
 
-    try:
-        membership = await ensure_membership(db, user.id, create_if_missing=False)
-    except HTTPException:
-        membership = await create_personal_org_membership(
-            db, user.id, org_name=f"{user.login}'s Org"
-        )
+    membership = await ensure_membership(db, user.id)
 
     return {
         "id": user.id,
