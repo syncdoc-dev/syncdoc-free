@@ -13,6 +13,8 @@ class SettingsResponse(BaseModel):
     notification_type: str | None = None
     slack_webhook_url: str | None = None
     github_token: str | None = None
+    auto_sync_enabled: bool = True
+    auto_sync_interval_minutes: int = 5
 
 
 class SettingsUpdate(BaseModel):
@@ -25,3 +27,5 @@ class SettingsUpdate(BaseModel):
     notification_type: str | None = None
     slack_webhook_url: str | None = None
     github_token: str | None = None
+    auto_sync_enabled: bool | None = None
+    auto_sync_interval_minutes: int | None = None

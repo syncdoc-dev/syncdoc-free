@@ -95,11 +95,11 @@ See [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md) for local development setup witho
 
 ## Roadmap / TODO
 
-- [ ] Official Helm chart for Kubernetes deployments
+- [x] Auto-sync (polling-based) — configurable interval via Settings
+- [ ] Webhook-based auto-sync (GitHub push events)
+- [ ] PDF export for pages
 - [ ] Windows development support
 - [ ] SDK and API client libraries
-- [ ] SOC 2 compliance documentation
-- [ ] Prometheus / OpenTelemetry metrics export
 
 ## Contributing
 

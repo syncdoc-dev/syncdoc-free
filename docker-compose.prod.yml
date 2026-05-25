@@ -97,6 +97,26 @@ services:
       start_period: 20s
       retries: 3
 
+  beat:
+    image: ${SYNC_DOC_API_IMAGE:-syncdocdev/syncdoc-api:latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      ENVIRONMENT: production
+      PYTHONUNBUFFERED: "1"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_ENDPOINT_URL: ${LLM_ENDPOINT_URL:-https://api.openai.com/v1}
+    command: celery -A app.celery_app beat --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   frontend:
     image: ${SYNC_DOC_FRONTEND_IMAGE:-syncdocdev/syncdoc-frontend:latest}
     restart: unless-stopped

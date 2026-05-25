@@ -36,6 +36,8 @@ _SETTING_KEYS = [
     "notification_type",
     "slack_webhook_url",
     "github_token",
+    "auto_sync_enabled",
+    "auto_sync_interval_minutes",
 ]
 
 
@@ -70,6 +72,21 @@ async def get_settings(
         app_settings.llm_endpoint_url or DEFAULT_ENDPOINTS.get(provider, ""),
     )
 
+    def _bool(key: str, default: bool) -> bool:
+        v = db_values.get(key)
+        if v is None:
+            return default
+        return v.lower() in ("true", "1", "yes", "on")
+
+    def _int(key: str, default: int) -> int:
+        v = db_values.get(key)
+        if v is None:
+            return default
+        try:
+            return int(v)
+        except ValueError:
+            return default
+
     return SettingsResponse(
         llm_provider=provider,
         llm_model=db_values.get("llm_model", app_settings.llm_model),
@@ -85,6 +102,8 @@ async def get_settings(
         notification_type=db_values.get("notification_type", app_settings.notification_type),
         slack_webhook_url=_mask(db_values.get("slack_webhook_url", app_settings.slack_webhook_url)),
         github_token=_mask(db_values.get("github_token", app_settings.github_token)),
+        auto_sync_enabled=_bool("auto_sync_enabled", True),
+        auto_sync_interval_minutes=_int("auto_sync_interval_minutes", 5),
     )
 
 
@@ -102,12 +121,15 @@ async def update_settings(
         if key in _SECRET_KEYS and _is_masked(value):
             continue
 
+        # Coerce booleans/ints to strings for the key-value store
+        store_value = str(value) if value is not None else ""
+
         # Upsert into DB
         existing = await db.get(AppSetting, key)
         if existing:
-            existing.value = value
+            existing.value = store_value
         else:
-            db.add(AppSetting(key=key, value=value))
+            db.add(AppSetting(key=key, value=store_value))
 
         # Patch in-memory settings so changes take effect immediately
         if hasattr(app_settings, key):

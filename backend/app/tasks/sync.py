@@ -446,3 +446,84 @@ async def _sync_source_async(source_id: str, task_id: str | None = None) -> dict
 def _is_git_url(url: str) -> bool:
     """Check if a URL looks like a git remote (not a local path)."""
     return url.startswith(("https://", "http://", "git://", "ssh://", "git@"))
+
+
+@app.task(base=SyncDocTask)
+def auto_sync_sources():
+    """Periodic task: enqueue sync for sources whose last_synced is older than the configured interval."""
+    return asyncio.run(_auto_sync_sources_async())
+
+
+async def _auto_sync_sources_async() -> dict:
+    """Async implementation of auto-sync polling."""
+    from datetime import timedelta
+
+    from sqlalchemy import select as sa_select
+
+    from app.models.setting import AppSetting
+    from app.models.source import Source
+
+    engine = create_async_engine(settings.database_url, echo=False)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with session_factory() as session:
+        # Read auto-sync settings from DB (fall back to defaults)
+        def _db_bool(key: str, default: bool) -> bool:
+            row = db_values.get(key)
+            if row is None:
+                return default
+            return str(row).lower() in ("true", "1", "yes", "on")
+
+        def _db_int(key: str, default: int) -> int:
+            row = db_values.get(key)
+            if row is None:
+                return default
+            try:
+                return int(row)
+            except (ValueError, TypeError):
+                return default
+
+        rows = (await session.execute(sa_select(AppSetting))).scalars().all()
+        db_values = {row.key: row.value for row in rows}
+
+        enabled = _db_bool("auto_sync_enabled", True)
+        interval_minutes = _db_int("auto_sync_interval_minutes", 5)
+
+        if not enabled:
+            logger.info("Auto-sync is disabled — skipping poll")
+            await engine.dispose()
+            return {"status": "skipped", "reason": "disabled"}
+
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=interval_minutes)
+
+        # Find sources that have never been synced or whose last sync is older than the interval
+        stmt = sa_select(Source).where(
+            (Source.last_synced == None) | (Source.last_synced < cutoff)  # noqa: E711
+        )
+        result = await session.execute(stmt)
+        due_sources = result.scalars().all()
+
+        enqueued = 0
+        for source in due_sources:
+            # Skip if there is already an in-progress sync for this source
+            active_stmt = sa_select(SyncRun).where(
+                SyncRun.source_id == source.id,
+                SyncRun.status == "in_progress",
+            )
+            active_result = await session.execute(active_stmt)
+            if active_result.scalar_one_or_none():
+                logger.debug("Skipping auto-sync for %s — sync already in progress", source.id)
+                continue
+
+            logger.info("Auto-sync enqueuing source %s (last synced: %s)", source.id, source.last_synced)
+            sync_source.delay(source.id)
+            enqueued += 1
+
+    await engine.dispose()
+
+    return {
+        "status": "completed",
+        "interval_minutes": interval_minutes,
+        "due_sources": len(due_sources),
+        "enqueued": enqueued,
+    }

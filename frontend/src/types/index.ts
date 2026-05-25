@@ -197,6 +197,8 @@ export interface AppSettings {
   notification_type: string | null;
   slack_webhook_url: string | null;
   github_token: string | null;
+  auto_sync_enabled: boolean;
+  auto_sync_interval_minutes: number;
 }
 
 export interface Page {

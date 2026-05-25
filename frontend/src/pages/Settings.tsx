@@ -42,6 +42,8 @@ export default function Settings() {
     notification_type: "slack",
     slack_webhook_url: null,
     github_token: null,
+    auto_sync_enabled: true,
+    auto_sync_interval_minutes: 5,
   });
   const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -125,17 +127,17 @@ export default function Settings() {
     setSaved(false);
     try {
       // Only send dirty fields, skip masked values
-      const payload: Record<string, string | null> = {};
+      const payload: Record<string, unknown> = {};
       for (const key of dirty) {
         const val = form[key as keyof AppSettings];
-        if (val !== null && isMasked(val)) continue;
+        if (typeof val === "string" && isMasked(val)) continue;
         payload[key] = val;
       }
       if (Object.keys(payload).length === 0) {
         setSaving(false);
         return;
       }
-      const updated = await updateSettings(payload);
+      const updated = await updateSettings(payload as Partial<AppSettings>);
       setForm(updated);
       setDirty(new Set());
       setSaved(true);
@@ -384,6 +386,69 @@ export default function Settings() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Auto-Sync */}
+        <div className={cardCls}>
+          <div>
+            <h2 className={sectionTitle}>Auto-Sync</h2>
+            <p className="text-sm text-[var(--text-muted)]">
+              Automatically poll sources for changes on a regular interval
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg border border-[var(--border-light)] bg-[var(--bg-input)]">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Enable auto-sync</p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Periodically check all sources and trigger sync when changes are detected
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setForm((prev) => ({ ...prev, auto_sync_enabled: !prev.auto_sync_enabled }));
+                setDirty((prev) => new Set(prev).add("auto_sync_enabled"));
+                setSaved(false);
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                form.auto_sync_enabled ? "bg-[var(--accent-strong)]" : "bg-[var(--border-light)]"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                  form.auto_sync_enabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <label className={labelCls}>Polling interval (minutes)</label>
+              <input
+                type="number"
+                min={1}
+                max={1440}
+                value={form.auto_sync_interval_minutes}
+                onChange={(e) => {
+                  const val = Math.max(1, Math.min(1440, parseInt(e.target.value, 10) || 1));
+                  setForm((prev) => ({ ...prev, auto_sync_interval_minutes: val }));
+                  setDirty((prev) => new Set(prev).add("auto_sync_interval_minutes"));
+                  setSaved(false);
+                }}
+                disabled={!form.auto_sync_enabled}
+                className={`${inputCls} disabled:opacity-50`}
+              />
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                How often to check each source for updates
+              </p>
+            </div>
+            <div className="flex items-end">
+              <p className="text-xs text-[var(--text-muted)] pb-2.5">
+                Webhook-based auto-sync (GitHub push events) is planned for a future release.
+              </p>
             </div>
           </div>
         </div>

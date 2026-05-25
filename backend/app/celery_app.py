@@ -18,6 +18,14 @@ app.conf.result_serializer = "json"
 app.conf.timezone = "UTC"
 app.conf.enable_utc = True
 
+# Periodic tasks (beat schedule)
+app.conf.beat_schedule = {
+    "auto-sync-sources": {
+        "task": "app.tasks.sync.auto_sync_sources",
+        "schedule": 60.0,  # Run every 60 seconds; the task itself checks which sources are due
+    },
+}
+
 # Auto-discover tasks from app.tasks
 app.autodiscover_tasks(["app.tasks"])
 

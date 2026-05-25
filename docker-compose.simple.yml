@@ -67,6 +67,25 @@ services:
         condition: service_healthy
     command: celery -A app.celery_app worker --loglevel=info --concurrency 4
 
+  beat:
+    image: ${SYNCDOC_API_IMAGE:-syncdocdev/syncdoc-api:latest}
+    environment:
+      DATABASE_URL: postgresql+asyncpg://syncdoc:syncdoc@postgres:5432/syncdoc
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: production
+      PYTHONUNBUFFERED: "1"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_ENDPOINT_URL: ${LLM_ENDPOINT_URL:-https://api.openai.com/v1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.celery_app beat --loglevel=info
+
   frontend:
     image: ${SYNCDOC_FRONTEND_IMAGE:-syncdocdev/syncdoc-frontend:latest}
     environment:
