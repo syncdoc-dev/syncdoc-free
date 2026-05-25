@@ -74,8 +74,8 @@ jobs:
       - name: Update pyproject.toml
         run: |
           NEW_VERSION=${{ steps.bump_version.outputs.version }}
-          # Update version in pyproject.toml
-          sed -i 's/version = ".*"/version = "'"$NEW_VERSION"'"/' backend/pyproject.toml
+          # Update project version in pyproject.toml (line starting with "version =")
+          sed -i '/^version = "/s/version = ".*"/version = "'"$NEW_VERSION"'"/' backend/pyproject.toml
           echo "Updated backend/pyproject.toml to version $NEW_VERSION"
           
       - name: Configure Git
