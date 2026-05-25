@@ -4,6 +4,7 @@ import { getApiBase } from "../api/client";
 interface DemoCredentials {
   username: string;
   password: string;
+  reset_at?: number | null;
 }
 
 interface Config {

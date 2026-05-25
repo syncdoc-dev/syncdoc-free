@@ -1,5 +1,7 @@
 """FastAPI application entry point"""
 
+import json
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -30,6 +32,7 @@ from app.api import (
 from app.api.auth import router as auth_router
 from app.core.config import get_settings
 from app.core.database import get_session_factory, init_db
+from app.core.rbac import ensure_membership
 from app.core.security import hash_password
 from app.models.user import User
 
@@ -44,23 +47,40 @@ async def lifespan(app: FastAPI):
     # Seed demo user when in demo mode
     settings = get_settings()
     if settings.demo_mode:
-        print("🎨 Demo mode active — ensuring demo user exists")
+        # Read dynamic credentials from file if available
+        demo_creds_file = os.environ.get("DEMO_STATE_DIR", "/demo-state") + "/creds.json"
+        demo_username = settings.demo_username
+        demo_password = settings.demo_password
+        if os.path.exists(demo_creds_file):
+            try:
+                with open(demo_creds_file) as f:
+                    creds = json.load(f)
+                demo_username = creds.get("username", demo_username)
+                demo_password = creds.get("password", demo_password)
+                print(f"🎨 Demo mode — using dynamic credentials for {demo_username}")
+            except Exception as exc:
+                print(f"⚠️  Could not read demo creds file: {exc}")
+
+        print(f"🎨 Demo mode active — ensuring demo user exists ({demo_username})")
         async with get_session_factory()() as db:
-            result = await db.execute(select(User).where(User.login == settings.demo_username))
+            result = await db.execute(select(User).where(User.login == demo_username))
             existing = result.scalar_one_or_none()
             if not existing:
                 user = User(
-                    login=settings.demo_username,
-                    email=f"{settings.demo_username}@demo.syncdoc.dev",
+                    login=demo_username,
+                    email=f"{demo_username}@demo.syncdoc.dev",
                     name="Demo User",
-                    password_hash=hash_password(settings.demo_password),
+                    password_hash=hash_password(demo_password),
                     auth_provider="local",
                 )
                 db.add(user)
                 await db.commit()
-                print(f"✅ Created demo user: {settings.demo_username}")
+                await db.refresh(user)
+                # Ensure org membership so login works immediately
+                await ensure_membership(db, user.id)
+                print(f"✅ Created demo user: {demo_username}")
             else:
-                print(f"✅ Demo user already exists: {settings.demo_username}")
+                print(f"✅ Demo user already exists: {demo_username}")
 
     yield
     # Shutdown
