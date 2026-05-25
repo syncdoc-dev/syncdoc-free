@@ -62,25 +62,28 @@ async def lifespan(app: FastAPI):
                 print(f"⚠️  Could not read demo creds file: {exc}")
 
         print(f"🎨 Demo mode active — ensuring demo user exists ({demo_username})")
-        async with get_session_factory()() as db:
-            result = await db.execute(select(User).where(User.login == demo_username))
-            existing = result.scalar_one_or_none()
-            if not existing:
-                user = User(
-                    login=demo_username,
-                    email=f"{demo_username}@demo.syncdoc.dev",
-                    name="Demo User",
-                    password_hash=hash_password(demo_password),
-                    auth_provider="local",
-                )
-                db.add(user)
-                await db.commit()
-                await db.refresh(user)
-                # Ensure org membership so login works immediately
-                await ensure_membership(db, user.id)
-                print(f"✅ Created demo user: {demo_username}")
-            else:
-                print(f"✅ Demo user already exists: {demo_username}")
+        try:
+            async with get_session_factory()() as db:
+                result = await db.execute(select(User).where(User.login == demo_username))
+                existing = result.scalar_one_or_none()
+                if not existing:
+                    user = User(
+                        login=demo_username,
+                        email=f"{demo_username}@demo.syncdoc.dev",
+                        name="Demo User",
+                        password_hash=hash_password(demo_password),
+                        auth_provider="local",
+                    )
+                    db.add(user)
+                    await db.commit()
+                    await db.refresh(user)
+                    # Ensure org membership so login works immediately
+                    await ensure_membership(db, user.id)
+                    print(f"✅ Created demo user: {demo_username}")
+                else:
+                    print(f"✅ Demo user already exists: {demo_username}")
+        except Exception as exc:
+            print(f"⚠️  Demo user seeding skipped (tables may not exist yet): {exc}")
 
     yield
     # Shutdown
