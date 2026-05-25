@@ -53,7 +53,7 @@ Please be respectful and constructive in all interactions.
 cd backend && pip install -e ".[dev]"
 
 # Start services
-docker-compose up
+docker compose up
 
 # Install pre-commit hooks if you use them locally
 pre-commit install

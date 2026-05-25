@@ -8,7 +8,7 @@ This guide covers common setup issues and optional configurations for running Sy
 
 If you see an error like `bind: address already in use`:
 
-**Solution:** Update `docker-compose.yml` to use different ports:
+**Solution:** Update `docker compose.yml` to use different ports:
 
 ```yaml
 services:
@@ -35,13 +35,13 @@ If the backend can't connect to PostgreSQL:
 
 ```bash
 # Check if postgres container is running
-docker-compose ps
+docker compose ps
 
 # Check postgres logs
-docker-compose logs postgres
+docker compose logs postgres
 
 # Ensure postgres is ready
-docker-compose exec postgres pg_isready
+docker compose exec postgres pg_isready
 ```
 
 ### Reset Everything
@@ -50,10 +50,10 @@ To completely reset and start fresh:
 
 ```bash
 # Stop and remove all containers, volumes, and networks
-docker-compose down -v
+docker compose down -v
 
 # Start fresh
-docker-compose up
+docker compose up
 ```
 
 ## Optional Configuration
@@ -78,7 +78,7 @@ GH_CLIENT_SECRET=your-client-secret-here
 3. **Restart services:**
 
 ```bash
-docker-compose restart api
+docker compose restart api
 ```
 
 ### AI Features (LLM Integration)
@@ -145,7 +145,7 @@ To access the database directly:
 
 ```bash
 # Connect to postgres container
-docker-compose exec postgres psql -U syncdoc -d syncdoc
+docker compose exec postgres psql -U syncdoc -d syncdoc
 
 # Useful commands:
 # \dt - List tables
@@ -167,29 +167,29 @@ docker-compose exec postgres psql -U syncdoc -d syncdoc
 ### Backend API Logs
 
 ```bash
-docker-compose logs -f api
+docker compose logs -f api
 ```
 
 ### Frontend Logs
 
 ```bash
-docker-compose logs -f frontend
+docker compose logs -f frontend
 ```
 
 ### All Services
 
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### Search in Logs
 
 ```bash
 # Grep for error
-docker-compose logs api | grep -i error
+docker compose logs api | grep -i error
 
 # Tail last 100 lines
-docker-compose logs --tail=100 api
+docker compose logs --tail=100 api
 ```
 
 ## Performance & Memory
@@ -199,10 +199,10 @@ If SyncDoc is slow or consuming too much memory:
 1. **Check memory usage:**
 
 ```bash
-docker-compose stats
+docker compose stats
 ```
 
-2. **Limit memory per service** (in docker-compose.yml):
+2. **Limit memory per service** (in docker compose.yml):
 
 ```yaml
 services:
@@ -218,9 +218,9 @@ services:
 3. **Rebuild images:**
 
 ```bash
-docker-compose down
-docker-compose build --no-cache
-docker-compose up
+docker compose down
+docker compose build --no-cache
+docker compose up
 ```
 
 ## Redis Issues
@@ -228,13 +228,13 @@ docker-compose up
 ### Clear Redis Cache
 
 ```bash
-docker-compose exec redis redis-cli FLUSHALL
+docker compose exec redis redis-cli FLUSHALL
 ```
 
 ### Monitor Redis
 
 ```bash
-docker-compose exec redis redis-cli MONITOR
+docker compose exec redis redis-cli MONITOR
 ```
 
 ## Development Mode
@@ -252,11 +252,11 @@ If hot-reload causes issues:
 
 ```bash
 # Backend
-docker-compose stop api
+docker compose stop api
 cd backend && uvicorn app.main:app --host 0.0.0.0
 
 # Frontend
-docker-compose stop frontend
+docker compose stop frontend
 cd frontend && npm run dev
 ```
 
@@ -265,20 +265,20 @@ cd frontend && npm run dev
 ### Run Backend Tests
 
 ```bash
-docker-compose exec api pytest tests/ -v
+docker compose exec api pytest tests/ -v
 ```
 
 ### Run Frontend Tests
 
 ```bash
-docker-compose exec frontend npm run test
+docker compose exec frontend npm run test
 ```
 
 ### Full Test Suite
 
 ```bash
-docker-compose exec api pytest tests/ -v --cov=app
-docker-compose exec frontend npm run test:coverage
+docker compose exec api pytest tests/ -v --cov=app
+docker compose exec frontend npm run test:coverage
 ```
 
 ## Debugging
@@ -294,7 +294,7 @@ import pdb; pdb.set_trace()  # Python debugger
 
 ```bash
 # Then run interactively
-docker-compose run --rm api bash
+docker compose run --rm api bash
 ```
 
 ### Browser DevTools
@@ -311,19 +311,19 @@ Frontend debugging:
 
 ```bash
 # Check migration status
-docker-compose exec api alembic current
+docker compose exec api alembic current
 
 # Downgrade to previous version
-docker-compose exec api alembic downgrade -1
+docker compose exec api alembic downgrade -1
 
 # Upgrade to latest
-docker-compose exec api alembic upgrade head
+docker compose exec api alembic upgrade head
 ```
 
 ### Create New Migration
 
 ```bash
-docker-compose exec api alembic revision --autogenerate -m "Your migration message"
+docker compose exec api alembic revision --autogenerate -m "Your migration message"
 ```
 
 ## Cleaning Up
@@ -331,24 +331,24 @@ docker-compose exec api alembic revision --autogenerate -m "Your migration messa
 ### Remove All Containers
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Remove with Volumes (Delete Data)
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Remove Images
 
 ```bash
-docker-compose down --rmi all
+docker compose down --rmi all
 ```
 
 ## Getting Help
 
-- Check logs: `docker-compose logs -f`
+- Check logs: `docker compose logs -f`
 - Review `.env` file (ensure it's set correctly)
 - Open an issue: https://github.com/syncdoc-dev/syncdoc-free/issues
 - Search existing issues: https://github.com/syncdoc-dev/syncdoc-free/issues?q=

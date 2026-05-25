@@ -143,7 +143,7 @@ cp .env.example .env
 
 # Edit .env to customize settings
 # Then start services
-docker-compose up
+docker compose up
 ```
 
 ### Production Environment Variables

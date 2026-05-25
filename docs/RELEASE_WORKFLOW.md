@@ -61,10 +61,10 @@ Use versioned tags such as `v0.1.1`:
 1. Merge tested code to `main`.
 2. Create and push a release tag.
 3. Confirm Docker Hub published the backend and frontend images for that tag.
-4. Update the private deployment repo to use that exact tag or digest.
+4. Update the [`syncdoc-deployment`](https://github.com/syncdoc-dev/syncdoc-deployment) repo to use that exact tag or digest.
 5. Deploy to Hetzner from the private repo.
 
-## Boundary With The Private Repo
+## Boundary With The Deployment Repo
 
 If a change affects product behavior, backend logic, frontend UI, or tests, it belongs here.
 
@@ -76,4 +76,4 @@ If a change affects:
 - Doppler service-token usage
 - deployment workflows
 
-it belongs in the private `syncdoc` repo.
+it belongs in the [`syncdoc-deployment`](https://github.com/syncdoc-dev/syncdoc-deployment) repo.

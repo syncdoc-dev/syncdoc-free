@@ -43,7 +43,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     volumes:
       - redis_data:/data
 
@@ -76,7 +76,7 @@ volumes:
 
 Then run:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Using Kubernetes
@@ -118,7 +118,7 @@ For quick testing:
 ```bash
 # Start dependencies
 docker run -d --name postgres -e POSTGRES_USER=syncdoc -e POSTGRES_PASSWORD=syncdoc_dev -e POSTGRES_DB=syncdoc pgvector/pgvector:pg16
-docker run -d --name redis redis:7-alpine
+docker run -d --name redis redis:8-alpine
 
 # Start API
 docker run -d --name syncdoc-api \
@@ -182,15 +182,15 @@ Based on `nginx:alpine`, includes:
 
 To update to the latest version:
 ```bash
-docker-compose pull
-docker-compose up -d
+docker compose pull
+docker compose up -d
 ```
 
 Or for specific versions:
 ```bash
 # Update to version 0.1.0
-docker-compose pull syncdoc-api syncdoc-frontend
-docker-compose up -d
+docker compose pull syncdoc-api syncdoc-frontend
+docker compose up -d
 ```
 
 ## Building Images Locally
