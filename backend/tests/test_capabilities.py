@@ -15,12 +15,12 @@ async def test_read_my_capabilities(async_client, auth_headers):
     assert "ai_generation" in capability_names
     assert "semantic_search" in capability_names
     assert "scheduled_sync" in capability_names
-    assert "scheduled_sync" in data["disabled"]
-    assert data["metadata"]["plan"] == "free"
+    assert data["metadata"]["plan"] == "open_source"
 
 
 @pytest.mark.asyncio
-async def test_capability_gate_blocks_unlicensed_analytics(async_client, auth_headers):
+async def test_capability_gate_allows_all_features_when_enforced(async_client, auth_headers):
+    """With open_source defaults, all features are available even when enforcement is on."""
     settings = get_settings()
     original = settings.license_enforcement_enabled
     settings.license_enforcement_enabled = True
@@ -29,7 +29,4 @@ async def test_capability_gate_blocks_unlicensed_analytics(async_client, auth_he
     finally:
         settings.license_enforcement_enabled = original
 
-    assert response.status_code == 403
-    detail = response.json()["detail"]
-    assert detail["code"] == "feature_not_in_plan"
-    assert detail["capability"] == "analytics"
+    assert response.status_code == 200
