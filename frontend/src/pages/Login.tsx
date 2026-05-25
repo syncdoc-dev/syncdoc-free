@@ -122,7 +122,7 @@ export default function Login() {
                 🎨 Demo Environment
               </p>
               <p className="text-xs text-amber-200/80">
-                Data resets every 30 minutes
+                Data resets every 10 minutes
               </p>
               <p className="mt-2 text-xs text-amber-200">
                 Try it with{" "}
