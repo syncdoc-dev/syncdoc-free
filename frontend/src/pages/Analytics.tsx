@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Database, FileText, Activity, AlertTriangle, GitBranch, TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
 import { getAnalytics } from "../api/client";
 import type { AnalyticsData } from "../types";
-import { useAuth } from "../context/AuthContext";
-import UpgradeBadge from "../components/UpgradeBadge";
 
 function SimpleLineChart({
   data,
@@ -107,41 +105,19 @@ function toolBadge(type: string | null | undefined) {
 }
 
 export default function Analytics() {
-  const { hasFeature } = useAuth();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [days, setDays] = useState(30);
-  const analyticsLicensed = hasFeature("analytics");
 
   useEffect(() => {
-    if (!analyticsLicensed) {
-      setLoading(false);
-      setData(null);
-      return;
-    }
     setLoading(true);
     setError("");
     getAnalytics(days)
       .then(setData)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
-  }, [days, analyticsLicensed]);
-
-  if (!analyticsLicensed) {
-    return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <UpgradeBadge />
-        </div>
-        <p className="mt-2 text-sm text-amber-100/90">
-          Analytics is available on Pro and above. Upgrade your license to unlock usage trends,
-          sync frequency, and coverage reporting.
-        </p>
-      </div>
-    );
-  }
+  }, [days]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);

@@ -9,7 +9,6 @@ import type { Page, Source, PageWithWorkflow, WorkflowInfo } from "../types";
 import { TOOL_COLORS } from "../components/InfraNode";
 import WorkflowPanel from "../components/WorkflowPanel";
 import { useAuth } from "../context/AuthContext";
-import UpgradeBadge from "../components/UpgradeBadge";
 import MermaidBlock from "../components/MermaidBlock";
 
 const SOURCE_TYPE_TO_TOOL: Record<string, string> = {
@@ -70,9 +69,8 @@ function resolveToolColor(page: Page | null, sources: Source[]): string | null {
 }
 
 export default function PageDetail() {
-  const { user, hasFeature } = useAuth();
+  const { user } = useAuth();
   const canEdit = user?.role !== "viewer";
-  const canUseAiDocs = hasFeature("ai_docs");
   const { id } = useParams<{ id: string }>();
   const [page, setPage] = useState<Page | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowInfo | null>(null);
@@ -271,28 +269,19 @@ export default function PageDetail() {
             ) : (
               <>
                 {page.source_id && (
-                  <div className="flex items-center gap-2">
-                    {!canUseAiDocs && <UpgradeBadge label="Pro" />}
-                    <button
-                      onClick={handleRegenerate}
-                      disabled={!canEdit || regenerating || !canUseAiDocs}
-                      title={
-                        !canUseAiDocs
-                          ? "Upgrade license to regenerate with AI docs"
-                          : canEdit
-                            ? "Regenerate from source"
-                            : "Insufficient role"
-                      }
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors disabled:opacity-50"
-                    >
-                      {regenerating ? (
-                        <div className="w-3.5 h-3.5 border-2 border-[var(--text-secondary)] border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      )}
-                      Regenerate
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleRegenerate}
+                    disabled={!canEdit || regenerating}
+                    title={canEdit ? "Regenerate from source" : "Insufficient role"}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors disabled:opacity-50"
+                  >
+                    {regenerating ? (
+                      <div className="w-3.5 h-3.5 border-2 border-[var(--text-secondary)] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    )}
+                    Regenerate
+                  </button>
                 )}
                 <button
                   onClick={handleExportMarkdown}

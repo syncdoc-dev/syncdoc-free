@@ -3,11 +3,8 @@ import { Link } from "react-router-dom";
 import { Search as SearchIcon, Server, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { getSettings, searchAll } from "../api/client";
 import type { AppSettings, SearchResults } from "../types";
-import { useAuth } from "../context/AuthContext";
-import UpgradeBadge from "../components/UpgradeBadge";
 
 export default function Search() {
-  const { hasFeature } = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +47,6 @@ export default function Search() {
   const totalResults = results
     ? results.nodes.length + results.pages.length
     : 0;
-  const semanticLicensed = hasFeature("semantic_search");
 
   return (
     <>
@@ -64,7 +60,7 @@ export default function Search() {
       {/* Search mode availability */}
       {(() => {
         const hasLlmKey = appSettings && !!appSettings.llm_api_key;
-        const enabled = !!hasLlmKey && semanticLicensed;
+        const enabled = !!hasLlmKey;
         return (
           <div
             className={`mb-6 rounded-xl border p-4 ${
@@ -82,7 +78,6 @@ export default function Search() {
               <h3 className="text-sm font-semibold text-[var(--text-white)]">
                 Semantic Search
               </h3>
-              {!enabled && !semanticLicensed && <UpgradeBadge label="Pro" />}
             </div>
             <p
               className={`text-xs ${
@@ -91,9 +86,7 @@ export default function Search() {
             >
               {enabled
                 ? "Embedding-based semantic search is enabled."
-                : semanticLicensed
-                  ? "Keyword search only until an LLM key is configured."
-                  : "Keyword search only. Upgrade your license to enable semantic search."}
+                : "Keyword search only until an LLM key is configured in Settings."}
             </p>
           </div>
         );

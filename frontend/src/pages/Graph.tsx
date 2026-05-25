@@ -39,7 +39,6 @@ import SourceGroupNode from "../components/SourceGroupNode";
 import GraphNoteNode, { type GraphNoteNodeType } from "../components/GraphNoteNode";
 import ManualEdge from "../components/ManualEdge";
 import { useAuth } from "../context/AuthContext";
-import UpgradeBadge from "../components/UpgradeBadge";
 
 const nodeTypes = { infra: InfraNodeComponent, sourceGroup: SourceGroupNode, note: GraphNoteNode };
 const edgeTypes = { animated: AnimatedEdge, manual: ManualEdge };
@@ -212,11 +211,8 @@ function getMinimapColor(node: Node): string {
 // ── Component ───────────────────────────────────────────────────────
 
 function GraphInner() {
-  const { user, entitlements, hasFeature } = useAuth();
+  const { user } = useAuth();
   const canEdit = user?.role && ["member", "admin", "owner"].includes(user.role);
-  const entitlementsLoaded = entitlements !== null;
-  const canUseGraphNotes = !entitlementsLoaded || hasFeature("graph_annotations");
-  const canUseManualEdges = !entitlementsLoaded || hasFeature("manual_graph_edges");
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [selectedSource, setSelectedSource] = useState<string>("");
@@ -411,7 +407,7 @@ function GraphInner() {
   }, [edges, highlightedEdges, selectedInfraId, isolate]);
 
   const addNote = async () => {
-    if (!canEdit || !canUseGraphNotes || !wrapperRef.current) return;
+    if (!canEdit || !wrapperRef.current) return;
     const bounds = wrapperRef.current.getBoundingClientRect();
     const position = screenToFlowPosition({
       x: bounds.left + bounds.width / 2,
@@ -489,16 +485,12 @@ function GraphInner() {
               ))}
             </div>
             {canEdit && (
-              <div className="flex items-center gap-2">
-                {!canUseGraphNotes && <UpgradeBadge label="Pro" />}
-                <button
-                  onClick={addNote}
-                  disabled={!canUseGraphNotes}
-                  className="rounded-full border border-[var(--border)] bg-[var(--bg-input)]/90 px-4 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Add note
-                </button>
-              </div>
+              <button
+                onClick={addNote}
+                className="rounded-full border border-[var(--border)] bg-[var(--bg-input)]/90 px-4 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
+              >
+                Add note
+              </button>
             )}
           </div>
         </div>
@@ -568,7 +560,7 @@ function GraphInner() {
                 );
               }}
               onConnect={async (params) => {
-                if (!canEdit || !canUseManualEdges || !params.source || !params.target) return;
+                if (!canEdit || !params.source || !params.target) return;
                 try {
                   const created = await createManualEdge({
                     from_node_id: params.source,
@@ -589,7 +581,7 @@ function GraphInner() {
                   // ignore
                 }
               }}
-              nodesConnectable={!!canEdit && canUseManualEdges}
+              nodesConnectable={!!canEdit}
             >
               <Background
                 variant={BackgroundVariant.Dots}
@@ -623,7 +615,7 @@ function GraphInner() {
                   </div>
                 </div>
               </Panel>
-              {canEdit && canUseManualEdges && selectedEdge && selectedEdge.id.startsWith("manual-") && (
+              {canEdit && selectedEdge && selectedEdge.id.startsWith("manual-") && (
                 <Panel position="bottom-right">
                   <div className="flex min-w-[240px] flex-col gap-3 rounded-[22px] border border-[var(--border)] bg-[var(--bg-card-strong)]/90 p-3 backdrop-blur">
                     <div className="app-kicker text-[10px] text-[var(--text-secondary)]">
@@ -789,13 +781,10 @@ function GraphInner() {
           )}
         </div>
 
-        {canEdit && (
+          {canEdit && (
           <div className="app-panel flex flex-col gap-3 rounded-[26px] p-4">
-            <div className="flex items-center gap-2">
-              <div className="app-kicker text-[10px] text-[var(--text-secondary)]">
-                Manual Connectors
-              </div>
-              {!canUseManualEdges && <UpgradeBadge label="Pro" />}
+            <div className="app-kicker text-[10px] text-[var(--text-secondary)]">
+              Manual Connectors
             </div>
             <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
               <span>Color</span>
@@ -803,25 +792,17 @@ function GraphInner() {
                 type="color"
                 value={manualEdgeColor}
                 onChange={(e) => setManualEdgeColor(e.target.value)}
-                disabled={!canUseManualEdges}
                 className="h-8 w-10 rounded-xl border border-[var(--border)] bg-transparent"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <div className="app-kicker text-[10px] text-[var(--text-secondary)]">
-                Notes
-              </div>
-              {!canUseGraphNotes && <UpgradeBadge label="Pro" />}
+            <div className="app-kicker text-[10px] text-[var(--text-secondary)]">
+              Notes
             </div>
             <div className="text-xs text-[var(--text-secondary)]">
-              {canUseManualEdges
-                ? "Drag between nodes to add manual connections."
-                : "Upgrade your license to add manual connections."}
+              Drag between nodes to add manual connections.
             </div>
             <div className="text-xs text-[var(--text-secondary)]">
-              {canUseGraphNotes
-                ? "Notes use a fixed style."
-                : "Upgrade your license to add graph notes."}
+              Notes use a fixed style.
             </div>
           </div>
         )}
