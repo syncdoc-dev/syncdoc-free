@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
-import { ArrowLeft, Clock, Hash, Edit2, Save, X, RefreshCw } from "lucide-react";
+import { ArrowLeft, Clock, Hash, Edit2, Save, X, RefreshCw, Download } from "lucide-react";
 import { getPage, getSources, updatePage, getPageWorkflow, regeneratePage } from "../api/client";
 import type { Page, Source, PageWithWorkflow, WorkflowInfo } from "../types";
 import { TOOL_COLORS } from "../components/InfraNode";
@@ -136,6 +136,19 @@ export default function PageDetail() {
     } finally {
       setRegenerating(false);
     }
+  };
+
+  const handleExportMarkdown = () => {
+    if (!page) return;
+    const blob = new Blob([page.content_md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${page.title.replace(/\s+/g, "_")}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const toolColor = resolveToolColor(page, sources);
@@ -281,6 +294,13 @@ export default function PageDetail() {
                     </button>
                   </div>
                 )}
+                <button
+                  onClick={handleExportMarkdown}
+                  title="Download markdown"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-input)] transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Export
+                </button>
                 <button
                   onClick={handleEdit}
                   disabled={!canEdit}

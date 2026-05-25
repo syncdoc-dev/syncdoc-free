@@ -118,7 +118,6 @@ export default function Sources() {
   const sourceLimit = getLimit("sources");
   const sourceLimitReached = sourceLimit !== null && sources.length >= sourceLimit;
   const aiDocsLicensed = hasFeature("ai_docs");
-  const semanticSearchLicensed = hasFeature("semantic_search");
   const selectedTypeInfo = SOURCE_TYPE_INFO[form.type] ?? SOURCE_TYPE_INFO.terraform;
   const canCheckSource = form.url.trim().length > 0;
 
@@ -307,19 +306,15 @@ export default function Sources() {
     return [
       {
         title: "LLM Page Generation",
-        enabled: !!hasLlmKey && aiDocsLicensed,
+        enabled: !!hasLlmKey,
         on: "Docs are generated during source syncs.",
-        off: aiDocsLicensed
-          ? "Add an LLM key to enable page generation."
-          : "Upgrade your license to enable AI doc generation.",
+        off: "Add an LLM API key in Settings to enable AI doc generation.",
       },
       {
         title: "Semantic Search",
-        enabled: !!hasLlmKey && semanticSearchLicensed,
+        enabled: !!hasLlmKey,
         on: "Embedding-based search is enabled.",
-        off: semanticSearchLicensed
-          ? "Add an LLM key to enable semantic search."
-          : "Upgrade your license to enable semantic search.",
+        off: "Add an LLM API key in Settings to enable semantic search.",
       },
       {
         title: "Graph + Drift",
@@ -328,7 +323,7 @@ export default function Sources() {
         off: "",
       },
     ];
-  }, [aiDocsLicensed, appSettings, semanticSearchLicensed]);
+  }, [appSettings]);
 
   const activeRunsBySource = useMemo(
     () =>
@@ -519,10 +514,6 @@ export default function Sources() {
                 <AlertCircle className="h-4 w-4 text-amber-400" />
               )}
               <h3 className="text-sm font-semibold text-[var(--text-white)]">{card.title}</h3>
-              {!card.enabled &&
-                (card.title === "LLM Page Generation" || card.title === "Semantic Search") && (
-                  <UpgradeBadge label="Pro" />
-                )}
             </div>
             <p className={`text-xs ${card.enabled ? "text-emerald-200/90" : "text-amber-200/90"}`}>
               {card.enabled ? card.on : card.off}

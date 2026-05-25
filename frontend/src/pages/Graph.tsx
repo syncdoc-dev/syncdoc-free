@@ -444,8 +444,8 @@ function GraphInner() {
   const isEmptyGraph = Boolean(graphData && graphData.nodes.length === 0);
 
   return (
-    <div className="grid min-h-[calc(100vh-14rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-4">
-      <div className="app-panel rounded-[30px] p-5 sm:p-6">
+    <div className="grid min-h-[calc(100vh-14rem)] gap-4 lg:grid-cols-[1fr_280px] lg:grid-rows-[auto_1fr]">
+      <div className="app-panel rounded-[30px] p-5 sm:p-6 lg:col-span-2">
         <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="app-kicker text-sm text-[var(--accent)]">Topology explorer</div>
@@ -728,8 +728,8 @@ function GraphInner() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <div className="app-panel flex h-full flex-col gap-3 rounded-[26px] p-4">
+      <div className="flex flex-col gap-4">
+        <div className="app-panel flex flex-col gap-3 rounded-[26px] p-4">
           <div className="app-kicker text-[10px] text-[var(--text-secondary)]">
             Focus
           </div>
@@ -789,8 +789,8 @@ function GraphInner() {
           )}
         </div>
 
-        {canEdit ? (
-          <div className="app-panel flex h-full flex-col gap-3 rounded-[26px] p-4">
+        {canEdit && (
+          <div className="app-panel flex flex-col gap-3 rounded-[26px] p-4">
             <div className="flex items-center gap-2">
               <div className="app-kicker text-[10px] text-[var(--text-secondary)]">
                 Manual Connectors
@@ -824,8 +824,6 @@ function GraphInner() {
                 : "Upgrade your license to add graph notes."}
             </div>
           </div>
-        ) : (
-          <div className="hidden lg:block" />
         )}
       </div>
     </div>
