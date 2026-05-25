@@ -450,7 +450,7 @@ def _is_git_url(url: str) -> bool:
 
 @app.task(base=SyncDocTask)
 def auto_sync_sources():
-    """Periodic task: enqueue sync for sources whose last_synced is older than the configured interval."""
+    """Periodic task: enqueue sync for sources whose last_synced is older than interval."""
     return asyncio.run(_auto_sync_sources_async())
 
 
@@ -515,7 +515,11 @@ async def _auto_sync_sources_async() -> dict:
                 logger.debug("Skipping auto-sync for %s — sync already in progress", source.id)
                 continue
 
-            logger.info("Auto-sync enqueuing source %s (last synced: %s)", source.id, source.last_synced)
+            logger.info(
+                "Auto-sync enqueuing source %s (last synced: %s)",
+                source.id,
+                source.last_synced,
+            )
             sync_source.delay(source.id)
             enqueued += 1
 
