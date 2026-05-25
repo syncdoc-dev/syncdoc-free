@@ -155,7 +155,8 @@ async def update_member_role(
     if settings.owner_login:
         if user.login == settings.owner_login and payload.role != "owner":
             raise HTTPException(
-                status_code=403, detail="Cannot change the designated owner's role",
+                status_code=403,
+                detail="Cannot change the designated owner's role",
             )
         if payload.role == "owner" and user.login != settings.owner_login:
             raise HTTPException(
