@@ -25,6 +25,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.password_reset_token import PasswordResetToken
+from app.models.subscription import Subscription
 from app.models.user import User
 from app.services.email import (
     EmailConfigurationError,
@@ -148,6 +149,18 @@ async def register(
     background_tasks.add_task(safe_send_registration_emails, user, source="local_register")
 
     membership = await ensure_membership(db, user.id)
+
+    # Create subscription record for billing
+    settings = get_settings()
+    if settings.billing_enabled:
+        sub = Subscription(
+            organization_id=membership.organization_id,
+            status="trialing",
+            trial_end=datetime.now(timezone.utc) + timedelta(days=settings.stripe_trial_days),
+            plan="pro",
+        )
+        db.add(sub)
+        await db.commit()
 
     # Issue JWT
     jwt_token = create_access_token(
@@ -318,6 +331,17 @@ async def github_callback(
         background_tasks.add_task(safe_send_registration_emails, user, source="github_oauth")
 
     membership = await ensure_membership(db, user.id)
+
+    # Create subscription record for billing
+    if is_new_user and settings.billing_enabled:
+        sub = Subscription(
+            organization_id=membership.organization_id,
+            status="trialing",
+            trial_end=datetime.now(timezone.utc) + timedelta(days=settings.stripe_trial_days),
+            plan="pro",
+        )
+        db.add(sub)
+        await db.commit()
 
     # Issue JWT
     jwt_token = create_access_token(

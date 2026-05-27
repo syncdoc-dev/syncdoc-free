@@ -29,6 +29,9 @@ from app.api import (
     sync_events,
     workflow,
 )
+from app.api import (
+    stripe as stripe_router,
+)
 from app.api.auth import router as auth_router
 from app.core.config import get_settings
 from app.core.database import get_session_factory, init_db
@@ -127,6 +130,7 @@ app.include_router(drift.router, prefix="/api/drift", tags=["drift"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(auth_router, prefix="/api")
+app.include_router(stripe_router.router, prefix="/api", tags=["stripe"])
 app.include_router(workflow.router, prefix="/api", tags=["workflow"])
 app.include_router(sync_events.router, prefix="/api", tags=["sync_events"])
 

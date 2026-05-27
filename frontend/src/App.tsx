@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
+import BillingGate from "./components/BillingGate";
 import Dashboard from "./pages/Dashboard";
 import Sources from "./pages/Sources";
 import Pages from "./pages/Pages";
@@ -18,6 +19,8 @@ import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import BillingSuccess from "./pages/BillingSuccess";
+import BillingCanceled from "./pages/BillingCanceled";
 import { useAuth } from "./context/AuthContext";
 
 function TokenHandler({ children }: { children: ReactNode }) {
@@ -60,10 +63,14 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/billing/success" element={<BillingSuccess />} />
+        <Route path="/billing/canceled" element={<BillingCanceled />} />
         <Route
           element={
             <RequireAuth>
-              <Layout />
+              <BillingGate>
+                <Layout />
+              </BillingGate>
             </RequireAuth>
           }
         >

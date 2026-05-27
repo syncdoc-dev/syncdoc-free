@@ -13,9 +13,10 @@ import {
   Trash2,
   Copy,
   CheckCircle,
+  CreditCard,
 } from "lucide-react";
-import { getSettings, updateSettings, createApiKey, listApiKeys, revokeApiKey, type ApiKeyInfo } from "../api/client";
-import type { AppSettings } from "../types";
+import { getSettings, updateSettings, createApiKey, listApiKeys, revokeApiKey, getBillingStatus, createCheckoutSession, createPortalSession, getConfig, type ApiKeyInfo } from "../api/client";
+import type { AppSettings, BillingStatus, AppConfig } from "../types";
 import { THEMES, useTheme } from "../context/ThemeContext";
 import UpgradeBadge from "../components/UpgradeBadge";
 import { useAuth } from "../context/AuthContext";
@@ -51,6 +52,11 @@ export default function Settings() {
   const [error, setError] = useState("");
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
 
+  // Billing state
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [stripeConfig, setStripeConfig] = useState<AppConfig["stripe"] | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+
   // API Keys state
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[]>([]);
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
@@ -79,6 +85,18 @@ export default function Settings() {
   useEffect(() => {
     load();
     loadApiKeys();
+    // Load billing status + stripe config
+    setBillingLoading(true);
+    Promise.all([
+      getBillingStatus().catch(() => null),
+      getConfig().then((c) => c.stripe).catch(() => ({} as AppConfig["stripe"])),
+    ])
+      .then(([billingData, stripeConfigData]) => {
+        setBilling(billingData);
+        setStripeConfig(stripeConfigData);
+      })
+      .catch(() => setBilling(null))
+      .finally(() => setBillingLoading(false));
   }, [load, loadApiKeys]);
 
   const updateField = (key: keyof AppSettings, value: string | null) => {
@@ -337,6 +355,112 @@ export default function Settings() {
             ))}
           </div>
         </div>
+
+        {/* Billing */}
+        {billing && billing.billing_enabled && (
+          <div className={cardCls}>
+            <div className="flex items-center gap-3 mb-5">
+              <CreditCard className="w-5 h-5 text-[var(--text-muted)]" />
+              <div>
+                <h2 className={sectionTitle}>Billing</h2>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Manage your subscription
+                  {stripeConfig && "test_mode" in stripeConfig && stripeConfig.test_mode && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      Test Mode
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {billingLoading ? (
+              <p className="text-sm text-[var(--text-muted)]">Loading...</p>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--bg-input)] border border-[var(--border)]">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      Current Plan: <span className="capitalize">{billing.plan}</span>
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Status:{" "}
+                      <span className="capitalize">
+                        {billing.stripe_subscription_id ? "active" : billing.status}
+                      </span>
+                      {billing.trial_days_remaining !== null && !billing.stripe_subscription_id && (
+                        <span className="ml-2">
+                          ({billing.trial_days_remaining} trial days remaining)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  {billing.plan === "owner" ? (
+                    <span className="text-xs text-[var(--sync-mint)] font-medium">
+                      Owner Access
+                    </span>
+                  ) : billing.status === "active" || (billing.status === "trialing" && billing.trial_days_remaining === 0) ? (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { portal_url } = await createPortalSession();
+                          window.location.href = portal_url;
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : "Could not open portal");
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-light)] text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
+                    >
+                      Manage Subscription
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          const priceId = stripeConfig && "pro_price_id" in stripeConfig ? stripeConfig.pro_price_id : "";
+                          if (!priceId) {
+                            setError("Price ID not configured");
+                            return;
+                          }
+                          try {
+                            const { checkout_url } = await createCheckoutSession(priceId, 1);
+                            window.location.href = checkout_url;
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : "Checkout failed");
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[var(--accent-strong)] text-white text-xs hover:opacity-90 transition-opacity"
+                      >
+                        Subscribe Pro
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const seats = parseInt(prompt("How many seats? (minimum 2)") || "2", 10);
+                          if (seats >= 2) {
+                            const priceId = stripeConfig && "team_price_id" in stripeConfig ? stripeConfig.team_price_id : "";
+                            if (!priceId) {
+                              setError("Price ID not configured");
+                              return;
+                            }
+                            try {
+                              const { checkout_url } = await createCheckoutSession(priceId, seats);
+                              window.location.href = checkout_url;
+                            } catch (e) {
+                              setError(e instanceof Error ? e.message : "Checkout failed");
+                            }
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg border border-[var(--border-light)] text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--hover-bg)] transition-colors"
+                      >
+                        Team
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Notifications */}
         <div className={cardCls}>

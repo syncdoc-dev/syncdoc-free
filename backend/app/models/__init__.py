@@ -13,6 +13,7 @@ from app.models.password_reset_token import PasswordResetToken
 from app.models.project import Project
 from app.models.setting import AppSetting
 from app.models.source import Source
+from app.models.subscription import Subscription
 from app.models.sync import SyncRun
 from app.models.user import User
 from app.models.workflow import (
@@ -35,6 +36,7 @@ __all__ = [
     "OrganizationLicense",
     "OrganizationMembership",
     "PasswordResetToken",
+    "Subscription",
     "Project",
     "DocPage",
     "DriftEvent",

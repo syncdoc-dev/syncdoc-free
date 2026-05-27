@@ -313,6 +313,28 @@ export interface Entitlements {
   metadata: Record<string, unknown>;
 }
 
+export interface BillingStatus {
+  billing_enabled: boolean;
+  plan: string;
+  status: string;
+  trial_days_remaining: number | null;
+  current_period_end: string | null;
+  seat_count: number;
+  checkout_required: boolean;
+  stripe_subscription_id?: string | null;
+}
+
+export interface AppConfig {
+  demo_mode: boolean;
+  demo_credentials: { username: string; password: string; reset_at: number | null } | null;
+  stripe: {
+    publishable_key: string;
+    pro_price_id: string;
+    team_price_id: string;
+    test_mode?: boolean;
+  } | Record<string, never>;
+}
+
 export interface UsageStats {
   total_sources: number;
   total_nodes: number;

@@ -34,7 +34,17 @@ async def get_config() -> dict:
                 "password": settings.demo_password,
                 "reset_at": None,
             }
+    stripe_config = {}
+    if settings.billing_enabled:
+        stripe_config = {
+            "publishable_key": settings.effective_stripe_publishable_key,
+            "pro_price_id": settings.stripe_pro_price_id,
+            "team_price_id": settings.stripe_team_price_id,
+            "test_mode": settings.billing_test_mode,
+        }
+
     return {
         "demo_mode": settings.demo_mode,
         "demo_credentials": demo_creds,
+        "stripe": stripe_config,
     }
