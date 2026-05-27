@@ -69,14 +69,17 @@ class TerraformConnector(IaCConnector):
 
         result: dict[str, Any] = {"tfstate": [], "hcl": []}
 
-        for tfstate_file in sorted(source_path.rglob("*.tfstate")):
+        # Only read files in the current directory (not subdirectories) —
+        # subdirectories are handled by separate TerraformConnector instances
+        # created by the GitConnector for each outermost directory.
+        for tfstate_file in sorted(source_path.glob("*.tfstate")):
             try:
                 data = json.loads(tfstate_file.read_text())
                 result["tfstate"].append(data)
             except (json.JSONDecodeError, OSError) as e:
                 logger.warning("Failed to read %s: %s", tfstate_file, e)
 
-        for tf_file in sorted(source_path.rglob("*.tf")):
+        for tf_file in sorted(source_path.glob("*.tf")):
             try:
                 with open(tf_file) as f:
                     data = hcl2.load(f)

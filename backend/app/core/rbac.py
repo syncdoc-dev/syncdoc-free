@@ -89,12 +89,28 @@ async def ensure_membership(
     if membership:
         return membership
 
-    org_result = await db.execute(select(Organization).limit(1))
-    org = org_result.scalar_one_or_none()
-    if org is None:
-        org = Organization(id=str(uuid.uuid4()), name="Default")
+    # Determine role for new member
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalar_one()
+    settings = get_settings()
+
+    is_owner = settings.owner_login and user.login == settings.owner_login
+
+    if settings.owner_login and not is_owner:
+        # Hosted mode, non-owner user: always create their own isolated org
+        org = Organization(id=str(uuid.uuid4()), name=f"{user.login}'s Org")
         db.add(org)
         await db.flush()
+        role = "owner"  # They are the owner of their own org
+    else:
+        # Self-hosted mode OR designated owner: use the first/default org
+        org_result = await db.execute(select(Organization).limit(1))
+        org = org_result.scalar_one_or_none()
+        if org is None:
+            org = Organization(id=str(uuid.uuid4()), name="Default")
+            db.add(org)
+            await db.flush()
+        role = "owner" if is_owner else "admin"
 
     project_result = await db.execute(
         select(Project).where(Project.organization_id == org.id).limit(1)
@@ -104,24 +120,6 @@ async def ensure_membership(
         project = Project(id=str(uuid.uuid4()), organization_id=org.id, name="General")
         db.add(project)
         await db.flush()
-
-    # Determine role for new member
-    user_result = await db.execute(select(User).where(User.id == user_id))
-    user = user_result.scalar_one()
-    settings = get_settings()
-
-    if settings.owner_login:
-        # Hosted mode: designated owner gets owner, everyone else gets admin
-        role = "owner" if user.login == settings.owner_login else "admin"
-    else:
-        # Self-hosted mode: first member becomes owner, subsequent members get admin
-        count_result = await db.execute(
-            select(OrganizationMembership)
-            .where(OrganizationMembership.organization_id == org.id)
-            .limit(1)
-        )
-        existing_member = count_result.scalar_one_or_none()
-        role = "owner" if existing_member is None else "admin"
 
     membership = OrganizationMembership(user_id=user_id, organization_id=org.id, role=role)
     db.add(membership)

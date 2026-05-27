@@ -18,6 +18,7 @@ from app.models.organization_license import OrganizationLicense
 from app.models.organization_membership import OrganizationMembership
 from app.models.project import Project
 from app.models.source import Source
+from app.models.subscription import Subscription
 
 FEATURE_AI_DOCS = "ai_docs"
 FEATURE_SEMANTIC_SEARCH = "semantic_search"
@@ -216,6 +217,34 @@ async def get_org_license(org_id: str, db: AsyncSession) -> OrganizationLicense 
 
 
 async def get_entitlements(org_id: str, db: AsyncSession) -> Entitlements:
+    settings = get_settings()
+
+    # SaaS mode: check Stripe subscription first
+    if settings.billing_enabled:
+        from sqlalchemy import select
+
+        sub_record = await db.scalar(
+            select(Subscription).where(Subscription.organization_id == org_id)
+        )
+        if sub_record and sub_record.status in ("active", "trialing"):
+            plan = sub_record.plan or "pro"
+            features = PLAN_FEATURES.get(plan) or PLAN_FEATURES["enterprise"]
+            limits = PLAN_LIMITS.get(plan, ENTERPRISE_LIMITS)
+            return Entitlements(
+                plan=plan,
+                status=sub_record.status,
+                enforcement_enabled=True,
+                features=set(features),
+                limits=dict(limits),
+                metadata={"source": "stripe"},
+            )
+        # No subscription or inactive — return free/locked entitlements
+        return _base_entitlements(
+            plan="free",
+            status="missing" if sub_record is None else sub_record.status,
+        )
+
+    # Self-hosted mode: check offline license
     record = await get_org_license(org_id, db)
     if record is None:
         return _base_entitlements(status="missing")

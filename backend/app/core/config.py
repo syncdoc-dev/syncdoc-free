@@ -97,6 +97,25 @@ class Settings(BaseSettings):
     # Role hierarchy
     owner_login: str | None = None  # If set, this login is the sole owner (hosted mode)
 
+    # Stripe / SaaS billing
+    stripe_secret_key: str | None = None
+    stripe_publishable_key: str | None = None
+    stripe_test_publishable_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_pro_price_id: str | None = None
+    stripe_team_price_id: str | None = None
+    stripe_trial_days: int = 14
+
+    @property
+    def billing_test_mode(self) -> bool:
+        return bool(self.stripe_secret_key and self.stripe_secret_key.startswith("sk_test_"))
+
+    @property
+    def effective_stripe_publishable_key(self) -> str | None:
+        if self.billing_test_mode and self.stripe_test_publishable_key:
+            return self.stripe_test_publishable_key
+        return self.stripe_publishable_key
+
     # Demo mode
     app_mode: str = Field(default="app")
     demo_username: str = Field(default="syncdoc")
@@ -109,6 +128,10 @@ class Settings(BaseSettings):
     @property
     def hosted_mode(self) -> bool:
         return self.owner_login is not None
+
+    @property
+    def billing_enabled(self) -> bool:
+        return bool(self.stripe_secret_key and self.stripe_pro_price_id)
 
 
 _settings: Settings | None = None

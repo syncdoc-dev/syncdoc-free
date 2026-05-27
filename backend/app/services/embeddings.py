@@ -31,7 +31,7 @@ async def get_embedding(text: str, db: Optional[AsyncSession] = None) -> list[fl
             model = cfg.get("embedding_model") or "text-embedding-3-small"
             client = AsyncOpenAI(api_key=api_key)
 
-            response = await client.embeddings.create(model=model, input=text[:8000])
+        response = await client.embeddings.create(model=model, input=text[:8000])
         return response.data[0].embedding
     except Exception as exc:
         logger.warning("Embedding generation failed: %s", exc)

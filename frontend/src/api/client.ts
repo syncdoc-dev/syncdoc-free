@@ -17,6 +17,8 @@ import type {
   ManualGraphEdge,
   LicenseRecord,
   Entitlements,
+  BillingStatus,
+  AppConfig,
   OwnerExplorerDetailResponse,
   OwnerExplorerListResponse,
   OwnerExplorerResource,
@@ -87,11 +89,25 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.text();
+    if (res.status === 402) {
+      try {
+        const json = JSON.parse(body);
+        const err = new Error(json.detail?.message || "Payment required");
+        (err as Error & { status: number; code: string }).status = 402;
+        (err as Error & { status: number; code: string }).code = json.detail?.code || "payment_required";
+        throw err;
+      } catch {
+        // fall through
+      }
+    }
     throw new Error(`${res.status}: ${body}`);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
 }
+
+// Config
+export const getConfig = () => request<AppConfig>("/config");
 
 // Health
 export const getHealth = () => request<{ status: string }>("/health");
@@ -253,6 +269,16 @@ export const installLicense = (licenseToken: string) =>
 export const deleteLicense = () =>
   request<void>("/license", { method: "DELETE" });
 export const getEntitlements = () => request<Entitlements>("/license/entitlements");
+
+// Billing
+export const getBillingStatus = () => request<BillingStatus>("/stripe/billing/status");
+export const createCheckoutSession = (priceId: string, quantity = 1) =>
+  request<{ checkout_url: string }>("/stripe/checkout-session", {
+    method: "POST",
+    body: JSON.stringify({ price_id: priceId, quantity }),
+  });
+export const createPortalSession = () =>
+  request<{ portal_url: string }>("/stripe/portal-session", { method: "POST" });
 
 // Sync runs
 export const getSyncRuns = (sourceId: string) =>
