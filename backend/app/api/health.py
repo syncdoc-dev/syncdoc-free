@@ -30,6 +30,7 @@ async def version_info():
     return {
         "version": settings.app_version,
         "environment": settings.environment,
+        "phase": settings.app_phase,
     }
 
 

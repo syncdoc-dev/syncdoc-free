@@ -64,7 +64,10 @@ async def create_checkout_session(
                 metadata={"organization_id": ctx.organization_id},
             )
         except stripe.error.StripeError as e:
-            raise HTTPException(status_code=502, detail=f"Stripe customer creation failed: {e.user_message or str(e)}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"Stripe customer creation failed: {e.user_message or str(e)}",
+            )
         sub.stripe_customer_id = customer.id
         await db.commit()
 
@@ -108,7 +111,10 @@ async def create_checkout_session(
     try:
         checkout_session = s.checkout.Session.create(**session_params)
     except stripe.error.StripeError as e:
-        raise HTTPException(status_code=502, detail=f"Stripe checkout failed: {e.user_message or str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Stripe checkout failed: {e.user_message or str(e)}",
+        )
 
     return {"checkout_url": checkout_session.url}
 
@@ -141,7 +147,10 @@ async def create_portal_session(
     except stripe.error.InvalidRequestError as e:
         raise HTTPException(status_code=400, detail=f"Stripe error: {e.user_message or str(e)}")
     except stripe.error.StripeError as e:
-        raise HTTPException(status_code=502, detail=f"Stripe service error: {e.user_message or str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Stripe service error: {e.user_message or str(e)}",
+        )
 
     return {"portal_url": portal_session.url}
 

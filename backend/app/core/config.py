@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     api_title: str = "SyncDoc API"
     # App version from Docker build arg (format: "v0.1.0" for releases, "dev-abc123" for dev)
     app_version: str = os.getenv("APP_VERSION", "dev")
+    # Phase badge: "stable" (default), "beta", "prerelease", or empty to hide badge.
+    # Set APP_PHASE=beta on the hosted deployment to show a Beta badge in the UI.
+    app_phase: str = ""
 
     # LLM
     llm_provider: str = "openai"  # "openai" or "anthropic"

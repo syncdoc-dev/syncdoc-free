@@ -111,6 +111,7 @@ export default function Layout() {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [appVersion, setAppVersion] = useState("dev");
+  const [appPhase, setAppPhase] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(getProjectId());
   const showLabels = !sidebarCollapsed || mobileOpen;
@@ -119,7 +120,10 @@ export default function Layout() {
   useEffect(() => {
     fetch("/api/version")
       .then((r) => r.json())
-      .then((d) => setAppVersion(d.version))
+      .then((d) => {
+        setAppVersion(d.version);
+        if (d.phase) setAppPhase(d.phase);
+      })
       .catch(() => {});
   }, []);
 
@@ -305,7 +309,23 @@ export default function Layout() {
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <div>
                         <div className="app-kicker text-[10px] text-[var(--text-muted)]">Runtime</div>
-                        <div className="mt-1 text-sm text-[var(--text-secondary)]">v{appVersion}</div>
+                        <div className="mt-1 flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                          v{appVersion}
+                          {appPhase && (
+                            <span
+                              className="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                              style={{
+                                background: appPhase === "beta"
+                                  ? "color-mix(in srgb, var(--warning) 20%, var(--bg-elevated))"
+                                  : "color-mix(in srgb, var(--accent) 20%, var(--bg-elevated))",
+                                color: appPhase === "beta" ? "var(--warning)" : "var(--accent)",
+                                border: `1px solid color-mix(in srgb, ${appPhase === "beta" ? "var(--warning)" : "var(--accent)"} 30%, transparent)`,
+                              }}
+                            >
+                              {appPhase}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <WebSocketStatusPill status={wsStatus} />
                     </div>
@@ -354,9 +374,22 @@ export default function Layout() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="rounded-full border border-[var(--border-bright)] bg-[var(--accent-bg)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                <div className="flex items-center gap-2 rounded-full border border-[var(--border-bright)] bg-[var(--accent-bg)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                   Version
-                  <span className="ml-2 font-medium text-[var(--text-white)]">v{appVersion}</span>
+                  <span className="font-medium text-[var(--text-white)]">v{appVersion}</span>
+                  {appPhase && (
+                    <span
+                      className="inline-flex items-center rounded-md px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+                      style={{
+                        background: appPhase === "beta"
+                          ? "color-mix(in srgb, var(--warning) 22%, transparent)"
+                          : "color-mix(in srgb, var(--accent) 22%, transparent)",
+                        color: appPhase === "beta" ? "var(--warning)" : "var(--accent)",
+                      }}
+                    >
+                      {appPhase}
+                    </span>
+                  )}
                 </div>
                 <div className="rounded-full border border-[var(--border)] bg-[var(--bg-input)]/80 px-3 py-2 text-xs text-[var(--text-secondary)]">
                   Current route
