@@ -15,10 +15,15 @@ from app.core.config import get_settings
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
+def _fernet_from_secret(secret: str) -> Fernet:
+    key = base64.urlsafe_b64encode(hashlib.sha256(secret.encode()).digest())
+    return Fernet(key)
+
+
 def get_fernet() -> Fernet:
     settings = get_settings()
-    key = base64.urlsafe_b64encode(hashlib.sha256(settings.jwt_secret_key.encode()).digest())
-    return Fernet(key)
+    encryption_secret = settings.credential_encryption_key or settings.jwt_secret_key
+    return _fernet_from_secret(encryption_secret)
 
 
 def encrypt_token(token: str) -> str:
@@ -26,7 +31,15 @@ def encrypt_token(token: str) -> str:
 
 
 def decrypt_token(encrypted: str) -> str:
-    return get_fernet().decrypt(encrypted.encode()).decode()
+    settings = get_settings()
+    try:
+        return get_fernet().decrypt(encrypted.encode()).decode()
+    except Exception:
+        if settings.credential_encryption_key:
+            # Credentials created before the dedicated key was configured used
+            # the JWT secret. Keep them readable during gradual key migration.
+            return _fernet_from_secret(settings.jwt_secret_key).decrypt(encrypted.encode()).decode()
+        raise
 
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:

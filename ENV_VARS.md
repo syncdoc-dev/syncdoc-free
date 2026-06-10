@@ -30,9 +30,9 @@ This document provides a comprehensive reference for all environment variables u
 | Variable | Description | Default | Required | Scope |
 |----------|-------------|---------|----------|-------|
 | `JWT_SECRET_KEY` | Secret key for JWT token generation | `change-me-in-production` | **Yes (in production)** | Backend, Worker |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | Access token expiration time in minutes | `30` | No | Backend |
-| `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token expiration time in days | `7` | No | Backend |
-| `BCRYPT_ROUNDS` | Number of bcrypt rounds for password hashing | `12` | No | Backend |
+| `CREDENTIAL_ENCRYPTION_KEY` | Optional separate key for source credentials; existing JWT-key-encrypted values remain readable | (empty) | Recommended | Backend, Worker |
+| `STRICT_SECURITY_CONFIG` | Reject weak production secrets at startup instead of warning | `false` | No | Backend, Worker |
+| `JWT_EXPIRE_MINUTES` | JWT lifetime in minutes | `10080` | No | Backend |
 
 ## Application URLs
 
@@ -46,9 +46,19 @@ This document provides a comprehensive reference for all environment variables u
 
 | Variable | Description | Default | Required | Scope |
 |----------|-------------|---------|----------|-------|
-| `ALLOW_SELF_REGISTER` | Whether to allow self-registration | `true` | No | Backend |
+| `ALLOW_SELF_REGISTER` | Whether to allow self-registration | `false` in the app; Compose preserves `true` for compatibility | No | Backend |
 | `GH_CLIENT_ID` | GitHub OAuth Client ID | (empty) | No (for GitHub OAuth) | Backend |
 | `GH_CLIENT_SECRET` | GitHub OAuth Client Secret | (empty) | No (for GitHub OAuth) | Backend |
+
+## Source Import Security
+
+| Variable | Description | Default | Required | Scope |
+|----------|-------------|---------|----------|-------|
+| `ALLOWED_SOURCE_HOSTS` | Comma-separated host allowlist for new remote sources | `github.com,gitlab.com,bitbucket.org` | No | Backend |
+| `ALLOW_PRIVATE_SOURCE_HOSTS` | Permit allowlisted hosts that resolve to private/non-public addresses | `false` | No | Backend |
+| `ALLOW_LOCAL_SOURCES` | Permit new local filesystem sources | `false` | No | Backend |
+| `SOURCE_IMPORT_ROOT` | Directory within which local source paths must resolve | (empty) | If local sources are enabled | Backend |
+| `ALLOW_RUNTIME_SETTINGS` | Permit settings stored through the application UI/API | `true` | No | Backend |
 
 ## Email Configuration
 
@@ -155,7 +165,8 @@ LOG_LEVEL=WARNING
 
 # Security (CRITICAL - change these!)
 JWT_SECRET_KEY=your-super-secret-key-here-change-in-production
-BCRYPT_ROUNDS=14
+CREDENTIAL_ENCRYPTION_KEY=use-a-different-random-secret-here
+STRICT_SECURITY_CONFIG=true
 
 # Database (adjust for your setup)
 DATABASE_URL=postgresql+asyncpg://syncdoc:secure-password@postgres-host:5432/syncdoc
@@ -204,6 +215,8 @@ REDIS_URL=redis://host:6379/0
 
 ## Validation
 
-The application validates critical environment variables on startup and will fail to start if required variables are missing or invalid.
+Production emits a warning for a weak `JWT_SECRET_KEY`. Set `STRICT_SECURITY_CONFIG=true`
+to make that condition fail startup. A supplied `CREDENTIAL_ENCRYPTION_KEY` must be at
+least 32 bytes in production.
 
 For detailed validation rules, see the backend configuration modules in `backend/app/core/config.py`.

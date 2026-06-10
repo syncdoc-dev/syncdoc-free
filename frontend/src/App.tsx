@@ -27,7 +27,7 @@ function TokenHandler({ children }: { children: ReactNode }) {
   const { setToken } = useAuth();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const token = params.get("token");
     if (token) {
       setToken(token);

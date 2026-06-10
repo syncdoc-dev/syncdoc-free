@@ -164,18 +164,20 @@ async def _sync_source_async(source_id: str, task_id: str | None = None) -> dict
                         Repo.clone_from(source_url, clone_dir, depth=1, env=git_env)
                     else:
                         # No per-source credential — check for global GitHub token
-                        from sqlalchemy import select as sa_select
+                        from app.services.runtime_settings import get_runtime_settings
 
-                        from app.models.setting import AppSetting
-
-                        global_token_row = await session.execute(
-                            sa_select(AppSetting).where(AppSetting.key == "github_token")
-                        )
-                        global_token = global_token_row.scalar_one_or_none()
-                        if global_token and global_token.value:
+                        global_token = None
+                        if settings.allow_runtime_settings:
+                            runtime_values = await get_runtime_settings(
+                                session,
+                                source.organization_id,
+                                {"github_token"},
+                            )
+                            global_token = runtime_values.get("github_token")
+                        if global_token:
                             logger.info("Using global GitHub token for clone of %s", source.id)
                             url_with_token = CredentialManager.inject_token_in_url(
-                                source_url, global_token.value
+                                source_url, global_token
                             )
                             Repo.clone_from(url_with_token, clone_dir, depth=1)
                         else:
@@ -360,7 +362,12 @@ async def _sync_source_async(source_id: str, task_id: str | None = None) -> dict
                         }
                     )
                 try:
-                    await send_drift_alert(source.url, drift_payloads, db=session)
+                    await send_drift_alert(
+                        source.url,
+                        drift_payloads,
+                        db=session,
+                        organization_id=source.organization_id,
+                    )
                 except Exception:
                     logger.exception("Slack notification failed — continuing")
 
@@ -460,51 +467,45 @@ async def _auto_sync_sources_async() -> dict:
 
     from sqlalchemy import select as sa_select
 
-    from app.models.setting import AppSetting
     from app.models.source import Source
+    from app.services.runtime_settings import get_runtime_settings
 
     engine = create_async_engine(settings.database_url, echo=False)
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async with session_factory() as session:
-        # Read auto-sync settings from DB (fall back to defaults)
-        def _db_bool(key: str, default: bool) -> bool:
-            row = db_values.get(key)
-            if row is None:
-                return default
-            return str(row).lower() in ("true", "1", "yes", "on")
-
-        def _db_int(key: str, default: int) -> int:
-            row = db_values.get(key)
-            if row is None:
-                return default
-            try:
-                return int(row)
-            except (ValueError, TypeError):
-                return default
-
-        rows = (await session.execute(sa_select(AppSetting))).scalars().all()
-        db_values = {row.key: row.value for row in rows}
-
-        enabled = _db_bool("auto_sync_enabled", True)
-        interval_minutes = _db_int("auto_sync_interval_minutes", 5)
-
-        if not enabled:
-            logger.info("Auto-sync is disabled — skipping poll")
-            await engine.dispose()
-            return {"status": "skipped", "reason": "disabled"}
-
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=interval_minutes)
-
-        # Find sources that have never been synced or whose last sync is older than the interval
-        stmt = sa_select(Source).where(
-            (Source.last_synced == None) | (Source.last_synced < cutoff)  # noqa: E711
-        )
-        result = await session.execute(stmt)
-        due_sources = result.scalars().all()
+        result = await session.execute(sa_select(Source))
+        sources = result.scalars().all()
 
         enqueued = 0
-        for source in due_sources:
+        due_count = 0
+        settings_cache: dict[str | None, dict[str, str]] = {}
+        for source in sources:
+            org_id = source.organization_id
+            if org_id not in settings_cache:
+                settings_cache[org_id] = await get_runtime_settings(
+                    session,
+                    org_id,
+                    {"auto_sync_enabled", "auto_sync_interval_minutes"},
+                )
+            org_settings = settings_cache[org_id]
+            enabled = org_settings.get("auto_sync_enabled", "true").lower() in {
+                "true",
+                "1",
+                "yes",
+                "on",
+            }
+            if not enabled:
+                continue
+            try:
+                interval_minutes = int(org_settings.get("auto_sync_interval_minutes", "5"))
+            except ValueError:
+                interval_minutes = 5
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=interval_minutes)
+            if source.last_synced is not None and source.last_synced >= cutoff:
+                continue
+            due_count += 1
+
             # Skip if there is already an in-progress sync for this source
             active_stmt = sa_select(SyncRun).where(
                 SyncRun.source_id == source.id,
@@ -527,7 +528,6 @@ async def _auto_sync_sources_async() -> dict:
 
     return {
         "status": "completed",
-        "interval_minutes": interval_minutes,
-        "due_sources": len(due_sources),
+        "due_sources": due_count,
         "enqueued": enqueued,
     }

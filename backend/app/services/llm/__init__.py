@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
-
 from app.core.config import settings
-from app.models.setting import AppSetting
 from app.services.llm.base import LLMClient
+from app.services.runtime_settings import get_runtime_settings
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +14,7 @@ if TYPE_CHECKING:
 
 async def _load_effective_settings(
     db: AsyncSession | None,
+    organization_id: str | None = None,
 ) -> dict[str, str | None]:
     """Merge DB overrides on top of env defaults."""
     cfg: dict[str, str | None] = {
@@ -24,22 +23,25 @@ async def _load_effective_settings(
         "llm_endpoint_url": settings.llm_endpoint_url,
         "llm_api_key": settings.llm_api_key,
     }
-    if db is not None:
-        rows = (await db.execute(select(AppSetting))).scalars().all()
+    if db is not None and organization_id and settings.allow_runtime_settings:
+        rows = await get_runtime_settings(db, organization_id)
         legacy_llm_api_key: str | None = None
-        for row in rows:
-            if row.key in cfg:
-                cfg[row.key] = row.value
-            elif row.key in {"openai_api_key", "anthropic_api_key"} and row.value:
-                legacy_llm_api_key = row.value
+        for key, value in rows.items():
+            if key in cfg:
+                cfg[key] = value
+            elif key in {"openai_api_key", "anthropic_api_key"} and value:
+                legacy_llm_api_key = value
         if not cfg["llm_api_key"] and legacy_llm_api_key:
             cfg["llm_api_key"] = legacy_llm_api_key
     return cfg
 
 
-async def get_llm_client(db: AsyncSession | None = None) -> LLMClient:
+async def get_llm_client(
+    db: AsyncSession | None = None,
+    organization_id: str | None = None,
+) -> LLMClient:
     """Return the configured LLM client, reading DB overrides when available."""
-    cfg = await _load_effective_settings(db)
+    cfg = await _load_effective_settings(db, organization_id)
     base_url = cfg["llm_endpoint_url"] or None
 
     if cfg["llm_provider"] == "openai":

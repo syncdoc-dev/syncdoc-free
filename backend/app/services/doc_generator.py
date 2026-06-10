@@ -109,7 +109,7 @@ async def generate_doc_for_source(  # noqa: C901
     # Build prompt and call LLM
     user_prompt = _build_prompt(source, nodes, edges, manual_edges, notes)
 
-    llm = await get_llm_client(db=session)
+    llm = await get_llm_client(db=session, organization_id=source.organization_id)
     content_md = await llm.generate(SYSTEM_PROMPT, user_prompt)
 
     # Build title from source
@@ -152,7 +152,11 @@ async def generate_doc_for_source(  # noqa: C901
 
     # Generate embedding
     try:
-        embedding = await get_embedding(f"{page.title}\n{page.content_md[:2000]}", db=session)
+        embedding = await get_embedding(
+            f"{page.title}\n{page.content_md[:2000]}",
+            db=session,
+            organization_id=source.organization_id,
+        )
         if embedding:
             page.embedding = embedding
             await session.commit()

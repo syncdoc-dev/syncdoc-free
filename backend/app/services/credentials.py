@@ -57,9 +57,15 @@ class CredentialManager:
         return list(result.scalars().all())
 
     @staticmethod
-    async def delete_credential(session: AsyncSession, credential_id: str) -> bool:
-        """Delete a credential by ID."""
-        cred = await session.get(SourceCredential, credential_id)
+    async def delete_credential(session: AsyncSession, source_id: str, credential_id: str) -> bool:
+        """Delete a credential only when it belongs to the requested source."""
+        result = await session.execute(
+            select(SourceCredential).where(
+                SourceCredential.id == credential_id,
+                SourceCredential.source_id == source_id,
+            )
+        )
+        cred = result.scalar_one_or_none()
         if not cred:
             return False
         await session.delete(cred)

@@ -154,7 +154,7 @@ def _serialize_sync_run(row: tuple[SyncRun, Source]) -> dict[str, Any]:
 def _serialize_setting(setting: AppSetting) -> dict[str, Any]:
     value = _mask_secret(setting.value) if setting.key in _SECRET_SETTING_KEYS else setting.value
     return {
-        "id": setting.key,
+        "id": setting.id,
         "key": setting.key,
         "value": value,
         "is_secret": setting.key in _SECRET_SETTING_KEYS,
@@ -249,9 +249,13 @@ def _sync_run_query(ctx: CurrentContext, project_id: str | None) -> Select[Any]:
     return query.order_by(SyncRun.started_at.desc())
 
 
-def _settings_query(_: CurrentContext, project_id: str | None) -> Select[Any]:
+def _settings_query(ctx: CurrentContext, project_id: str | None) -> Select[Any]:
     del project_id
-    return select(AppSetting).order_by(AppSetting.updated_at.desc(), AppSetting.key.asc())
+    return (
+        select(AppSetting)
+        .where(AppSetting.organization_id == ctx.organization_id)
+        .order_by(AppSetting.updated_at.desc(), AppSetting.key.asc())
+    )
 
 
 RESOURCES: dict[str, ResourceAdapter] = {

@@ -327,6 +327,7 @@ export interface BillingStatus {
 export interface AppConfig {
   demo_mode: boolean;
   demo_credentials: { username: string; password: string; reset_at: number | null } | null;
+  self_registration_enabled: boolean;
   stripe: {
     publishable_key: string;
     pro_price_id: string;

@@ -10,6 +10,7 @@ interface DemoCredentials {
 interface Config {
   demo_mode: boolean;
   demo_credentials: DemoCredentials | null;
+  self_registration_enabled: boolean;
 }
 
 export function useConfig() {

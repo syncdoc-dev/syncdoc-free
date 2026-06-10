@@ -3,21 +3,21 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SourceCreate(BaseModel):
     """Create a new source"""
 
     type: str  # "terraform", "docker", "ansible", "git", "ci_cd"
-    url: str
+    url: str = Field(..., min_length=1, max_length=2048)
     credentials_ref: Optional[str] = None
     project_id: Optional[str] = None
 
 
 class SourceInspectRequest(BaseModel):
     type: str
-    url: str
+    url: str = Field(..., min_length=1, max_length=2048)
 
 
 class SourceInspectionResponse(BaseModel):

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.rate_limit import enforce_rate_limit
 from app.core.rbac import ensure_membership
 from app.core.security import (
     create_access_token,
@@ -107,6 +108,13 @@ async def register(
 ) -> dict:
     """Register a new local user."""
     settings = get_settings()
+    await enforce_rate_limit(
+        request,
+        action="register",
+        identifier=req.login,
+        limit=5,
+        window_seconds=3600,
+    )
     if not settings.allow_self_register:
         token = req.bootstrap_token or request.headers.get("X-Bootstrap-Token")
         if (
@@ -189,8 +197,19 @@ async def register(
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> dict:
+async def login(
+    req: LoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     """Login with username and password."""
+    await enforce_rate_limit(
+        request,
+        action="login",
+        identifier=req.login,
+        limit=10,
+        window_seconds=300,
+    )
     try:
         result = await db.execute(
             select(User).where(or_(User.login == req.login, User.email == req.login))
@@ -233,22 +252,40 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)) -> dict:
 @router.get("/github")
 async def github_login() -> RedirectResponse:
     settings = get_settings()
+    if not settings.github_client_id or not settings.github_client_secret:
+        raise HTTPException(status_code=503, detail="GitHub OAuth is not configured")
+    state = secrets.token_urlsafe(32)
     github_auth_url = (
         "https://github.com/login/oauth/authorize"
         f"?client_id={settings.github_client_id}"
         "&scope=repo,read:user,user:email"
         f"&redirect_uri={settings.backend_url.rstrip('/')}/api/auth/github/callback"
+        f"&state={state}"
     )
-    return RedirectResponse(github_auth_url)
+    response = RedirectResponse(github_auth_url)
+    response.set_cookie(
+        "syncdoc_oauth_state",
+        state,
+        max_age=600,
+        httponly=True,
+        secure=settings.environment.lower() == "production",
+        samesite="lax",
+    )
+    return response
 
 
 @router.get("/github/callback")
 async def github_callback(
     code: str,
+    state: str,
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
     settings = get_settings()
+    expected_state = request.cookies.get("syncdoc_oauth_state")
+    if not expected_state or not secrets.compare_digest(state, expected_state):
+        raise HTTPException(status_code=400, detail="Invalid OAuth state")
 
     # Exchange code for access token
     async with httpx.AsyncClient() as client:
@@ -354,7 +391,11 @@ async def github_callback(
     )
 
     # Redirect to frontend callback so token is stored before protected routes render
-    return RedirectResponse(f"{settings.frontend_url.rstrip('/')}/auth/callback?token={jwt_token}")
+    response = RedirectResponse(
+        f"{settings.frontend_url.rstrip('/')}/auth/callback#token={jwt_token}"
+    )
+    response.delete_cookie("syncdoc_oauth_state")
+    return response
 
 
 @router.get("/me")
@@ -442,9 +483,17 @@ async def update_me(
 @router.post("/forgot-password")
 async def forgot_password(
     req: ForgotPasswordRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     settings = get_settings()
+    await enforce_rate_limit(
+        request,
+        action="forgot-password",
+        identifier=req.login_or_email,
+        limit=5,
+        window_seconds=3600,
+    )
     if not settings.email_enabled:
         raise HTTPException(status_code=503, detail="Email delivery is not configured")
 
@@ -484,8 +533,16 @@ async def forgot_password(
 @router.post("/reset-password")
 async def reset_password(
     req: ResetPasswordRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
+    await enforce_rate_limit(
+        request,
+        action="reset-password",
+        identifier=req.token,
+        limit=10,
+        window_seconds=3600,
+    )
     result = await db.execute(
         select(PasswordResetToken).where(
             PasswordResetToken.token_hash == _hash_reset_token(req.token)

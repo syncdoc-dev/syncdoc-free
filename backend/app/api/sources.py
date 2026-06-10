@@ -14,6 +14,7 @@ from app.connectors.exceptions import PullError
 from app.core.database import get_db
 from app.core.deps import CurrentContext
 from app.core.rbac import require_role, resolve_project_id
+from app.core.source_security import validate_source_location
 from app.models.drift import DriftEvent
 from app.models.node import InfraEdge, InfraNode
 from app.models.page import DocPage
@@ -63,8 +64,14 @@ async def create_source(
             detail=f"Invalid source type '{source.type}'. Valid: {valid_types}",
         )
 
+    validated_url = validate_source_location(source.url)
     try:
-        inspection = await inspect_source(source.type, source.url, db)
+        inspection = await inspect_source(
+            source.type,
+            validated_url,
+            db,
+            ctx.organization_id,
+        )
     except PullError as exc:
         raise HTTPException(
             status_code=400,
@@ -77,7 +84,7 @@ async def create_source(
     db_source = Source(
         id=uuid.uuid4().hex[:16],
         type=source.type,
-        url=source.url,
+        url=validated_url,
         credentials_ref=source.credentials_ref,
         user_id=ctx.user.id,
         organization_id=ctx.organization_id,
@@ -102,8 +109,14 @@ async def inspect_source_endpoint(
             detail=f"Invalid source type '{payload.type}'. Valid: {valid_types}",
         )
 
+    validated_url = validate_source_location(payload.url)
     try:
-        inspection = await inspect_source(payload.type, payload.url, db)
+        inspection = await inspect_source(
+            payload.type,
+            validated_url,
+            db,
+            ctx.organization_id,
+        )
     except PullError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
