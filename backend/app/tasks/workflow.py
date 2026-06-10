@@ -46,7 +46,13 @@ async def _process_notification_async(
                 logger.warning(f"Page not found: {workflow.page_id}")
                 return {"status": "skipped", "reason": "page_not_found"}
 
-            await send_workflow_notification(workflow, page, action, db=session)
+            await send_workflow_notification(
+                workflow,
+                page,
+                action,
+                db=session,
+                organization_id=page.organization_id,
+            )
 
             return {
                 "status": "completed",

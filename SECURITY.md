@@ -130,57 +130,36 @@ Please include:
 ## Security Features in SyncDoc
 
 ### Authentication & Authorization
-- JWT-based authentication with refresh tokens
-- bcrypt password hashing with configurable work factor
+- JWT-based authentication
+- bcrypt password hashing
 - Role-based access control (RBAC)
-- GitHub OAuth integration
-- Account lockout after failed attempts
+- GitHub OAuth integration with callback state validation
+- Baseline in-process rate limits for authentication endpoints
 - Secure password reset functionality
 
 ### Input Validation
 - Pydantic models for request/response validation
 - SQLAlchemy ORM to prevent SQL injection
-- File type validation for uploads
-- Size limits on file uploads
-- Sanitization of user-generated content
+- Allowlisted remote source hosts with private-network blocking by default
+- Explicit root confinement for newly added local filesystem sources
 
 ### Secure Communications
 - HTTPS enforcement (via reverse proxy)
 - Secure WebSocket connections (WSS)
 - JWT tokens transmitted via Authorization header
-- Same-site cookies for session management
+- Same-site, HTTP-only cookies for OAuth state
 
 ### Auditing & Logging
-- Comprehensive audit logging of user actions
-- Structured logging for easier parsing
-- Request/response logging (configurable for sensitive data)
-- Failed authentication attempt logging
+- Application and worker logging
 
 ### Dependency Security
-- Regular dependency updates through automated processes
-- Vulnerability scanning in CI/CD pipeline
 - Locked dependencies for reproducible builds
 
 ## Compliance
 
-SyncDoc is designed to help organizations meet various compliance requirements:
-
-### GDPR
-- Data export functionality
-- Data deletion capabilities
-- Consent tracking (through application logic)
-- Data minimization principles
-
-### SOC 2 Type II
-- Audit logging
-- Access controls
-- Change management
-- Monitoring and alerting
-
-### ISO 27001
-- Information security management framework compatibility
-- Risk assessment and treatment capabilities
-- Asset management through infrastructure documentation
+SyncDoc does not claim certification or compliance with a particular framework. Operators
+are responsible for deployment controls, retention, monitoring, backups, and regulatory
+requirements.
 
 ## Security Updates
 

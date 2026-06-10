@@ -46,5 +46,6 @@ async def get_config() -> dict:
     return {
         "demo_mode": settings.demo_mode,
         "demo_credentials": demo_creds,
+        "self_registration_enabled": settings.allow_self_register,
         "stripe": stripe_config,
     }

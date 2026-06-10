@@ -7,6 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import settings
 from app.core.database import Base, get_db
 from app.core.security import create_access_token
 from app.main import app
@@ -14,6 +15,18 @@ from app.models.organization import Organization
 from app.models.organization_membership import OrganizationMembership
 from app.models.project import Project
 from app.models.user import User
+
+
+@pytest.fixture(autouse=True)
+def configure_test_source_root(tmp_path):
+    """Permit local fixtures only within each test's temporary directory."""
+    original_enabled = settings.allow_local_sources
+    original_root = settings.source_import_root
+    settings.allow_local_sources = True
+    settings.source_import_root = str(tmp_path)
+    yield
+    settings.allow_local_sources = original_enabled
+    settings.source_import_root = original_root
 
 
 @pytest.fixture

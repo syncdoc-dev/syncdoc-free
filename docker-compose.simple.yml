@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-syncdoc_dev}
       POSTGRES_DB: syncdoc
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:8-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -41,6 +41,11 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
+      ALLOW_LOCAL_SOURCES: ${ALLOW_LOCAL_SOURCES:-false}
+      ALLOWED_SOURCE_HOSTS: ${ALLOWED_SOURCE_HOSTS:-github.com,gitlab.com,bitbucket.org}
+      ALLOW_PRIVATE_SOURCE_HOSTS: ${ALLOW_PRIVATE_SOURCE_HOSTS:-false}
+      SOURCE_IMPORT_ROOT: ${SOURCE_IMPORT_ROOT:-}
     ports:
       - "8000:8000"
     depends_on:
@@ -57,6 +62,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: ${ENVIRONMENT:-production}
       PYTHONUNBUFFERED: "1"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o}
@@ -70,11 +77,12 @@ services:
   beat:
     image: ${SYNCDOC_API_IMAGE:-syncdocdev/syncdoc-api:latest}
     environment:
-      DATABASE_URL: postgresql+asyncpg://syncdoc:syncdoc@postgres:5432/syncdoc
+      DATABASE_URL: postgresql+asyncpg://syncdoc:${POSTGRES_PASSWORD:-syncdoc_dev}@postgres:5432/syncdoc
       REDIS_URL: redis://redis:6379/0
       ENVIRONMENT: production
       PYTHONUNBUFFERED: "1"
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o}
       LLM_API_KEY: ${LLM_API_KEY:-}

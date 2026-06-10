@@ -77,7 +77,7 @@ async def delete_credential(
     if source.organization_id != ctx.organization_id:
         raise HTTPException(status_code=404, detail="Source not found")
 
-    deleted = await CredentialManager.delete_credential(db, credential_id)
+    deleted = await CredentialManager.delete_credential(db, source_id, credential_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Credential not found")
 

@@ -64,7 +64,10 @@ async def create_checkout_session(
                 metadata={"organization_id": ctx.organization_id},
             )
         except stripe.error.StripeError as e:
-            raise HTTPException(status_code=502, detail=f"Stripe customer creation failed: {e.user_message or str(e)}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"Stripe customer creation failed: {e.user_message or str(e)}",
+            )
         sub.stripe_customer_id = customer.id
         await db.commit()
 
@@ -108,7 +111,10 @@ async def create_checkout_session(
     try:
         checkout_session = s.checkout.Session.create(**session_params)
     except stripe.error.StripeError as e:
-        raise HTTPException(status_code=502, detail=f"Stripe checkout failed: {e.user_message or str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Stripe checkout failed: {e.user_message or str(e)}",
+        )
 
     return {"checkout_url": checkout_session.url}
 
@@ -141,7 +147,10 @@ async def create_portal_session(
     except stripe.error.InvalidRequestError as e:
         raise HTTPException(status_code=400, detail=f"Stripe error: {e.user_message or str(e)}")
     except stripe.error.StripeError as e:
-        raise HTTPException(status_code=502, detail=f"Stripe service error: {e.user_message or str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Stripe service error: {e.user_message or str(e)}",
+        )
 
     return {"portal_url": portal_session.url}
 
@@ -186,8 +195,7 @@ async def _handle_stripe_event(event: Any, db: AsyncSession) -> None:
 async def _handle_checkout_completed(data: Any, db: AsyncSession) -> None:
     org_id = data.client_reference_id or (
         data.subscription_data.metadata.organization_id
-        if hasattr(data, "subscription_data")
-        and hasattr(data.subscription_data, "metadata")
+        if hasattr(data, "subscription_data") and hasattr(data.subscription_data, "metadata")
         else None
     )
     if not org_id:
@@ -239,9 +247,7 @@ async def _handle_subscription_updated(data: Any, db: AsyncSession) -> None:
     sub.current_period_end = _timestamp_to_datetime(
         data.current_period_end if hasattr(data, "current_period_end") else None
     )
-    sub.trial_end = _timestamp_to_datetime(
-        data.trial_end if hasattr(data, "trial_end") else None
-    )
+    sub.trial_end = _timestamp_to_datetime(data.trial_end if hasattr(data, "trial_end") else None)
 
     # Update price/plan if changed
     if hasattr(data, "items") and hasattr(data.items, "data") and data.items.data:
@@ -323,9 +329,7 @@ async def billing_status(
 
     # Owner plan is permanent — but only for the designated owner login
     is_authorized_owner = (
-        sub.plan == "owner"
-        and settings.owner_login
-        and ctx.login == settings.owner_login
+        sub.plan == "owner" and settings.owner_login and ctx.login == settings.owner_login
     )
     if is_authorized_owner:
         checkout_required = False

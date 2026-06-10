@@ -4,29 +4,32 @@ import logging
 from typing import Any
 
 import httpx
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.setting import AppSetting
+from app.services.runtime_settings import get_runtime_settings
 
 logger = logging.getLogger(__name__)
 
 
-async def _get_runtime_setting(key: str, db: AsyncSession | None = None) -> str | None:
-    if db is not None:
-        row = await db.execute(select(AppSetting).where(AppSetting.key == key))
-        setting = row.scalar_one_or_none()
-        if setting and setting.value:
-            return setting.value
+async def _get_runtime_setting(
+    key: str,
+    db: AsyncSession | None = None,
+    organization_id: str | None = None,
+) -> str | None:
+    if db is not None and organization_id and settings.allow_runtime_settings:
+        values = await get_runtime_settings(db, organization_id, {key})
+        if values.get(key):
+            return values[key]
     return getattr(settings, key, None)
 
 
 async def _get_notification_config(
     db: AsyncSession | None = None,
+    organization_id: str | None = None,
 ) -> tuple[str | None, str | None]:
-    notification_type = await _get_runtime_setting("notification_type", db)
-    webhook_url = await _get_runtime_setting("slack_webhook_url", db)
+    notification_type = await _get_runtime_setting("notification_type", db, organization_id)
+    webhook_url = await _get_runtime_setting("slack_webhook_url", db, organization_id)
     return notification_type, webhook_url
 
 
@@ -35,12 +38,13 @@ async def send_drift_alert(
     drift_events: list[dict[str, Any]],
     *,
     db: AsyncSession | None = None,
+    organization_id: str | None = None,
 ) -> bool:
     """Post a drift alert to Slack via incoming webhook.
 
     Returns True if the message was sent successfully.
     """
-    notification_type, webhook_url = await _get_notification_config(db)
+    notification_type, webhook_url = await _get_notification_config(db, organization_id)
     if notification_type not in (None, "", "slack"):
         logger.debug("Notification type is %s — skipping Slack notification", notification_type)
         return False
@@ -120,12 +124,13 @@ async def send_workflow_notification(
     action: str,
     *,
     db: AsyncSession | None = None,
+    organization_id: str | None = None,
 ) -> bool:
     """Post a workflow event notification to Slack via incoming webhook.
 
     Returns True if the message was sent successfully.
     """
-    notification_type, webhook_url = await _get_notification_config(db)
+    notification_type, webhook_url = await _get_notification_config(db, organization_id)
     if notification_type not in (None, "", "slack"):
         logger.debug("Notification type is %s — skipping Slack notification", notification_type)
         return False

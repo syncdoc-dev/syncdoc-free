@@ -28,21 +28,19 @@ dependencies = [
     "email-validator>=2.0.0",
     "python-dotenv>=1.0.0",
     "httpx>=0.27.0",
-    "PyJWT>=2.8.0",
-    "cryptography>=42.0.0",
+    "cryptography>=46.0.7",
     "passlib[argon2]>=1.7.4",
     "argon2-cffi>=23.1.0",
     "anthropic>=0.7.0",
     "openai>=1.0.0",
-    "python-multipart>=0.0.6",
+    "python-multipart>=0.0.27",
     "python-hcl2>=4.0.0",
     "pyyaml>=6.0.0",
-    "gitpython>=3.1.0",
+    "gitpython>=3.1.50",
     "langchain>=0.1.0",
     "scikit-learn>=1.3.0",
     "greenlet>=3.0.0",
-    "pyjwt>=2.8.0",
-    "cryptography>=41.0.0",
+    "pyjwt>=2.13.0",
     "stripe>=9.0.0",
 ]
 
@@ -85,7 +83,7 @@ exclude = [".venv", "venv", ".git", "__pycache__"]
 include = ["app*"]
 
 [tool.mypy]
-python_version = "1.1.0"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

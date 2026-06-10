@@ -1,8 +1,10 @@
 """Application configuration"""
 
 import os
+import warnings
+from functools import cached_property
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +26,7 @@ class Settings(BaseSettings):
 
     # Environment
     environment: str = "development"
+    strict_security_config: bool = False
 
     # API
     api_title: str = "SyncDoc API"
@@ -60,6 +63,7 @@ class Settings(BaseSettings):
 
     # JWT
     jwt_secret_key: str = "change-me-in-production"
+    credential_encryption_key: str | None = None
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
 
@@ -68,8 +72,13 @@ class Settings(BaseSettings):
     backend_url: str = "http://localhost:8000"
 
     # Registration
-    allow_self_register: bool = True
+    allow_self_register: bool = False
     bootstrap_token: str | None = None
+    allow_runtime_settings: bool = True
+    allowed_source_hosts: str = "github.com,gitlab.com,bitbucket.org"
+    allow_private_source_hosts: bool = False
+    allow_local_sources: bool = False
+    source_import_root: str | None = None
 
     # Email / SMTP
     email_enabled: bool = False
@@ -105,6 +114,34 @@ class Settings(BaseSettings):
     stripe_pro_price_id: str | None = None
     stripe_team_price_id: str | None = None
     stripe_trial_days: int = 14
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.environment.lower() == "production":
+            weak_secrets = {
+                "change-me-in-production",
+                "your-secret-key-here-change-for-production",
+            }
+            weak_jwt = self.jwt_secret_key in weak_secrets or len(self.jwt_secret_key.encode()) < 32
+            if self.strict_security_config and weak_jwt:
+                raise ValueError(
+                    "JWT_SECRET_KEY must be at least 32 bytes and must not use a default value"
+                )
+            if weak_jwt:
+                warnings.warn(
+                    "Production is using a weak JWT_SECRET_KEY. Set a random 32-byte value; "
+                    "future releases may reject this configuration.",
+                    stacklevel=2,
+                )
+            if self.credential_encryption_key and len(self.credential_encryption_key.encode()) < 32:
+                raise ValueError("CREDENTIAL_ENCRYPTION_KEY must be at least 32 bytes")
+        return self
+
+    @cached_property
+    def source_host_allowlist(self) -> set[str]:
+        return {
+            host.strip().lower() for host in self.allowed_source_hosts.split(",") if host.strip()
+        }
 
     @property
     def billing_test_mode(self) -> bool:

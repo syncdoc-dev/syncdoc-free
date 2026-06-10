@@ -1,15 +1,14 @@
 """Settings API: runtime application configuration."""
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings as app_settings
 from app.core.database import get_db
 from app.core.deps import CurrentContext
 from app.core.rbac import require_role
-from app.models.setting import AppSetting
 from app.schemas.settings import SettingsResponse, SettingsUpdate
+from app.services.runtime_settings import get_runtime_settings, upsert_runtime_setting
 
 router = APIRouter()
 
@@ -62,8 +61,7 @@ async def get_settings(
 ):
     """Return current settings (secrets masked)."""
     # Load DB overrides
-    rows = (await db.execute(select(AppSetting))).scalars().all()
-    db_values = {row.key: row.value for row in rows}
+    db_values = await get_runtime_settings(db, ctx.organization_id)
 
     # Build response: DB value > env default
     provider = db_values.get("llm_provider", app_settings.llm_provider)
@@ -110,10 +108,15 @@ async def get_settings(
 @router.put("/", response_model=SettingsResponse)
 async def update_settings(
     updates: SettingsUpdate,
-    ctx: CurrentContext = Depends(require_role("admin")),
+    ctx: CurrentContext = Depends(require_role("owner")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update settings. Masked values are ignored. Returns updated settings."""
+    """Update global settings only when explicitly enabled for a trusted deployment."""
+    if not app_settings.allow_runtime_settings:
+        raise HTTPException(
+            status_code=403,
+            detail="Runtime settings updates are disabled; configure settings via environment",
+        )
     changes = updates.model_dump(exclude_none=True)
 
     for key, value in changes.items():
@@ -125,15 +128,7 @@ async def update_settings(
         store_value = str(value) if value is not None else ""
 
         # Upsert into DB
-        existing = await db.get(AppSetting, key)
-        if existing:
-            existing.value = store_value
-        else:
-            db.add(AppSetting(key=key, value=store_value))
-
-        # Patch in-memory settings so changes take effect immediately
-        if hasattr(app_settings, key):
-            object.__setattr__(app_settings, key, value)
+        await upsert_runtime_setting(db, ctx.organization_id, key, store_value)
 
     await db.commit()
 

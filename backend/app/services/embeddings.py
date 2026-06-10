@@ -11,10 +11,14 @@ from app.services.llm import _load_effective_settings
 logger = logging.getLogger(__name__)
 
 
-async def get_embedding(text: str, db: Optional[AsyncSession] = None) -> list[float] | None:
+async def get_embedding(
+    text: str,
+    db: Optional[AsyncSession] = None,
+    organization_id: str | None = None,
+) -> list[float] | None:
     """Generate embeddings. Uses OpenAI API or custom LLM endpoint if configured."""
     try:
-        cfg = await _load_effective_settings(db)
+        cfg = await _load_effective_settings(db, organization_id)
         api_key = cfg.get("llm_api_key")
         base_url = cfg.get("llm_endpoint_url")
 

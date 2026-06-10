@@ -159,26 +159,28 @@ export default function Login() {
             >
               Login
             </button>
-            <button
-              onClick={() => {
-                setMode("register");
-                setError("");
-                setFormData({
-                  login: "",
-                  email: "",
-                  password: "",
-                  name: "",
-                  marketing_opt_in: false,
-                });
-              }}
-              className={`flex-1 pb-2 text-sm font-medium transition-colors ${
-                mode === "register"
-                  ? "text-[var(--accent)] border-b-2 border-[var(--accent)]"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-white)]"
-              }`}
-            >
-              Register
-            </button>
+            {config?.self_registration_enabled && (
+              <button
+                onClick={() => {
+                  setMode("register");
+                  setError("");
+                  setFormData({
+                    login: "",
+                    email: "",
+                    password: "",
+                    name: "",
+                    marketing_opt_in: false,
+                  });
+                }}
+                className={`flex-1 pb-2 text-sm font-medium transition-colors ${
+                  mode === "register"
+                    ? "text-[var(--accent)] border-b-2 border-[var(--accent)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-white)]"
+                }`}
+              >
+                Register
+              </button>
+            )}
           </div>
 
           {error && (

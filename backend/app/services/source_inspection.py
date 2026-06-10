@@ -11,14 +11,14 @@ from typing import Callable
 import yaml
 from git import Repo
 from git.exc import GitCommandError
-from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.connectors.ansible import NON_PLAYBOOK_FILES, _is_playbook
 from app.connectors.docker import COMPOSE_FILENAMES
 from app.connectors.exceptions import PullError
-from app.models.setting import AppSetting
+from app.core.source_security import validate_source_location
 from app.services.credentials import CredentialManager
+from app.services.runtime_settings import get_runtime_settings
 
 _TERRAFORM_LABEL = "Terraform"
 _DOCKER_LABEL = "Docker"
@@ -36,8 +36,17 @@ class SourceInspectionResult:
     warnings: list[str]
 
 
-async def inspect_source(source_type: str, url: str, db: AsyncSession) -> SourceInspectionResult:
-    local_path, cleanup = await _prepare_source_path(url, db)
+async def inspect_source(
+    source_type: str,
+    url: str,
+    db: AsyncSession,
+    organization_id: str,
+) -> SourceInspectionResult:
+    local_path, cleanup = await _prepare_source_path(
+        validate_source_location(url),
+        db,
+        organization_id,
+    )
     try:
         return _inspect_source_path(source_type, local_path)
     finally:
@@ -45,7 +54,9 @@ async def inspect_source(source_type: str, url: str, db: AsyncSession) -> Source
 
 
 async def _prepare_source_path(
-    source_url: str, db: AsyncSession
+    source_url: str,
+    db: AsyncSession,
+    organization_id: str,
 ) -> tuple[Path, Callable[[], None]]:
     if not _is_git_url(source_url):
         source_path = Path(source_url)
@@ -56,12 +67,13 @@ async def _prepare_source_path(
     clone_dir = tempfile.mkdtemp(prefix="syncdoc-inspect-")
     clone_url = source_url
 
-    global_token_row = await db.execute(
-        sa_select(AppSetting).where(AppSetting.key == "github_token")
-    )
-    global_token = global_token_row.scalar_one_or_none()
-    if global_token and global_token.value:
-        clone_url = CredentialManager.inject_token_in_url(source_url, global_token.value)
+    from app.core.config import get_settings
+
+    if get_settings().allow_runtime_settings:
+        values = await get_runtime_settings(db, organization_id, {"github_token"})
+        global_token = values.get("github_token")
+        if global_token:
+            clone_url = CredentialManager.inject_token_in_url(source_url, global_token)
 
     try:
         Repo.clone_from(clone_url, clone_dir, depth=1)

@@ -1,19 +1,24 @@
 """Admin system status endpoints"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import redis.asyncio as redis
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.deps import CurrentContext
 from app.core.rbac import require_role
-from app.models.setting import AppSetting
+from app.models.drift import DriftEvent
+from app.models.node import InfraNode
+from app.models.page import DocPage
+from app.models.source import Source
+from app.models.sync import SyncRun
+from app.services.runtime_settings import get_runtime_settings
 
 router = APIRouter()
 
@@ -46,7 +51,7 @@ class AdminResponse(BaseModel):
     settings_summary: dict
 
 
-_start_time = datetime.now()
+_start_time = datetime.now(timezone.utc)
 
 
 @router.get("/admin/status", response_model=AdminResponse)
@@ -55,9 +60,6 @@ async def get_system_status(
     db: AsyncSession = Depends(get_db),
 ):
     """Get comprehensive system status"""
-    global _start_time
-    _start_time = datetime.now()
-
     settings = get_settings()
     components = []
     db_stats = DbStats(
@@ -73,23 +75,39 @@ async def get_system_status(
         await db.execute(text("SELECT 1"))
         components.append(ComponentStatus(name="database", status="healthy", details="Connected"))
 
-        # Get stats
-        sources_result = await db.execute(text("SELECT COUNT(*) FROM sources"))
-        db_stats.total_sources = sources_result.scalar() or 0
-
-        nodes_result = await db.execute(text("SELECT COUNT(*) FROM infra_nodes"))
-        db_stats.total_nodes = nodes_result.scalar() or 0
-
-        pages_result = await db.execute(text("SELECT COUNT(*) FROM doc_pages"))
-        db_stats.total_pages = pages_result.scalar() or 0
-
-        drift_result = await db.execute(
-            text("SELECT COUNT(*) FROM drift_events WHERE resolved = 0")
+        source_ids = select(Source.id).where(Source.organization_id == ctx.organization_id)
+        node_ids = select(InfraNode.id).where(InfraNode.source_id.in_(source_ids))
+        db_stats.total_sources = int(
+            await db.scalar(
+                select(func.count(Source.id)).where(Source.organization_id == ctx.organization_id)
+            )
+            or 0
         )
-        db_stats.total_drift_events = drift_result.scalar() or 0
-
-        sync_result = await db.execute(text("SELECT COUNT(*) FROM sync_runs"))
-        db_stats.total_sync_runs = sync_result.scalar() or 0
+        db_stats.total_nodes = int(
+            await db.scalar(
+                select(func.count(InfraNode.id)).where(InfraNode.source_id.in_(source_ids))
+            )
+            or 0
+        )
+        db_stats.total_pages = int(
+            await db.scalar(
+                select(func.count(DocPage.id)).where(DocPage.organization_id == ctx.organization_id)
+            )
+            or 0
+        )
+        db_stats.total_drift_events = int(
+            await db.scalar(
+                select(func.count(DriftEvent.id)).where(
+                    DriftEvent.node_id.in_(node_ids),
+                    DriftEvent.resolved == 0,
+                )
+            )
+            or 0
+        )
+        db_stats.total_sync_runs = int(
+            await db.scalar(select(func.count(SyncRun.id)).where(SyncRun.source_id.in_(source_ids)))
+            or 0
+        )
 
     except Exception as e:
         components.append(ComponentStatus(name="database", status="unhealthy", details=str(e)))
@@ -139,21 +157,17 @@ async def get_system_status(
 
     # Also check database for runtime settings
     try:
-        result = await db.execute(
-            select(AppSetting).where(
-                AppSetting.key.in_(
-                    [
-                        "slack_webhook_url",
-                        "github_token",
-                        "llm_api_key",
-                        "openai_api_key",
-                        "anthropic_api_key",
-                    ]
-                )
-            )
+        db_settings = await get_runtime_settings(
+            db,
+            ctx.organization_id,
+            {
+                "slack_webhook_url",
+                "github_token",
+                "llm_api_key",
+                "openai_api_key",
+                "anthropic_api_key",
+            },
         )
-        rows = result.scalars().all()
-        db_settings = {row.key: row.value for row in rows}
         if db_settings.get("slack_webhook_url"):
             settings_summary["has_slack"] = True
         if db_settings.get("github_token"):
@@ -170,7 +184,8 @@ async def get_system_status(
 
     system = SystemStatus(
         status="running",
-        timestamp=datetime.now().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        uptime_seconds=(datetime.now(timezone.utc) - _start_time).total_seconds(),
         version=settings.app_version,
     )
 
@@ -180,75 +195,3 @@ async def get_system_status(
         database_stats=db_stats,
         settings_summary=settings_summary,
     )
-
-
-@router.get("/admin/db/tables")
-async def list_tables(db: AsyncSession = Depends(get_db)):
-    """List all database tables"""
-    result = await db.execute(
-        text(
-            """
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-        ORDER BY table_name
-    """
-        )
-    )
-    tables = [row[0] for row in result.all()]
-    return {"tables": tables}
-
-
-@router.get("/admin/db/tables/{table}")
-async def table_data(
-    table: str, limit: int = 20, offset: int = 0, db: AsyncSession = Depends(get_db)
-):
-    """Get data from a specific table"""
-    # Validate table name to prevent SQL injection
-    result = await db.execute(
-        text(
-            """
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public' AND table_name = :table
-    """
-        ),
-        {"table": table},
-    )
-
-    if not result.first():
-        return {"error": f"Table '{table}' not found", "columns": [], "rows": []}
-
-    # Get row count
-    count_result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
-    total = count_result.scalar() or 0
-
-    # Get columns
-    cols_result = await db.execute(
-        text(
-            """
-        SELECT column_name, data_type
-        FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = :table
-        ORDER BY ordinal_position
-    """
-        ),
-        {"table": table},
-    )
-    columns = [{"name": row[0], "type": row[1]} for row in cols_result.all()]
-
-    # Get data with limit/offset
-    data_result = await db.execute(
-        text(f"SELECT * FROM {table} LIMIT :limit OFFSET :offset"),
-        {"limit": limit, "offset": offset},
-    )
-    rows = [dict(row._mapping) for row in data_result.all()]
-
-    return {
-        "table": table,
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-        "columns": columns,
-        "rows": rows,
-    }

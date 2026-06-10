@@ -10,3 +10,7 @@ class CurrentContext:
     user: User
     organization_id: str
     role: str
+
+    @property
+    def login(self) -> str:
+        return self.user.login

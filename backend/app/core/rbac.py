@@ -8,7 +8,6 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.core.context import CurrentContext
 from app.models.organization import Organization
 from app.models.organization_membership import OrganizationMembership
@@ -79,7 +78,8 @@ async def ensure_membership(
         raise HTTPException(status_code=403, detail="No organization membership")
 
     # Serialize first-time org/membership creation to avoid race conditions.
-    await db.execute(text("SELECT pg_advisory_xact_lock(:lock_key)").bindparams(lock_key=1))
+    if db.bind and db.bind.dialect.name == "postgresql":
+        await db.execute(text("SELECT pg_advisory_xact_lock(:lock_key)").bindparams(lock_key=1))
 
     # Re-check after acquiring the lock.
     result = await db.execute(
@@ -92,25 +92,12 @@ async def ensure_membership(
     # Determine role for new member
     user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one()
-    settings = get_settings()
-
-    is_owner = settings.owner_login and user.login == settings.owner_login
-
-    if settings.owner_login and not is_owner:
-        # Hosted mode, non-owner user: always create their own isolated org
-        org = Organization(id=str(uuid.uuid4()), name=f"{user.login}'s Org")
-        db.add(org)
-        await db.flush()
-        role = "owner"  # They are the owner of their own org
-    else:
-        # Self-hosted mode OR designated owner: use the first/default org
-        org_result = await db.execute(select(Organization).limit(1))
-        org = org_result.scalar_one_or_none()
-        if org is None:
-            org = Organization(id=str(uuid.uuid4()), name="Default")
-            db.add(org)
-            await db.flush()
-        role = "owner" if is_owner else "admin"
+    # New identities always receive an isolated organization. Membership in an
+    # existing organization must be explicitly created by an existing admin.
+    org = Organization(id=str(uuid.uuid4()), name=f"{user.login}'s Org {uuid.uuid4().hex[:8]}")
+    db.add(org)
+    await db.flush()
+    role = "owner"
 
     project_result = await db.execute(
         select(Project).where(Project.organization_id == org.id).limit(1)

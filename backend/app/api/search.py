@@ -59,7 +59,11 @@ async def search(
 
     if semantic_allowed:
         try:
-            embedding = await get_embedding(q)
+            embedding = await get_embedding(
+                q,
+                db=session,
+                organization_id=ctx.organization_id,
+            )
             if embedding:
                 has_embeddings = await session.scalar(
                     select(func.count(DocPage.id)).where(
