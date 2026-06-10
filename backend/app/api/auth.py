@@ -3,6 +3,7 @@
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import httpx
@@ -250,16 +251,28 @@ async def login(
 
 
 @router.get("/github")
-async def github_login() -> RedirectResponse:
+async def github_login(request: Request) -> RedirectResponse:
     settings = get_settings()
     if not settings.github_client_id or not settings.github_client_secret:
         raise HTTPException(status_code=503, detail="GitHub OAuth is not configured")
+
+    # If the request came through a proxy (e.g. frontend nginx forwarding
+    # Host: app.syncdoc.dev), redirect to the canonical backend URL so the
+    # syncdoc_oauth_state cookie is set on the same domain the GitHub
+    # callback will arrive at.
+    backend_host = urlparse(settings.backend_url).hostname
+    request_host = request.url.hostname
+    if request_host and backend_host and request_host != backend_host:
+        return RedirectResponse(
+            f"{settings.backend_url.rstrip('/')}/api/auth/github"
+        )
+
     state = secrets.token_urlsafe(32)
     github_auth_url = (
         "https://github.com/login/oauth/authorize"
         f"?client_id={settings.github_client_id}"
         "&scope=repo,read:user,user:email"
-        f"&redirect_uri={settings.frontend_url.rstrip('/')}/api/auth/github/callback"
+        f"&redirect_uri={settings.backend_url.rstrip('/')}/api/auth/github/callback"
         f"&state={state}"
     )
     response = RedirectResponse(github_auth_url)
