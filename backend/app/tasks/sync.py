@@ -502,7 +502,8 @@ async def _auto_sync_sources_async() -> dict:
             except ValueError:
                 interval_minutes = 5
             cutoff = datetime.now(timezone.utc) - timedelta(minutes=interval_minutes)
-            if source.last_synced is not None and source.last_synced >= cutoff:
+            last_synced = _coerce_utc(source.last_synced)
+            if last_synced is not None and last_synced >= cutoff:
                 continue
             due_count += 1
 

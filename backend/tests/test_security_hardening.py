@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -15,6 +16,7 @@ from app.models.organization import Organization
 from app.models.project import Project
 from app.models.source import Source
 from app.services.credentials import CredentialManager
+from app.tasks.sync import _coerce_utc
 
 
 @pytest.mark.asyncio
@@ -165,3 +167,12 @@ def test_legacy_credentials_remain_decryptable_with_new_key():
         assert decrypt_token(encrypted) == "legacy-secret"
     finally:
         settings.credential_encryption_key = original_key
+
+
+def test_auto_sync_timestamps_are_normalized_to_utc():
+    naive = datetime(2026, 6, 10, 12, 0, 0)
+    aware = datetime(2026, 6, 10, 13, 0, 0, tzinfo=timezone.utc)
+
+    assert _coerce_utc(naive) == datetime(2026, 6, 10, 12, 0, 0, tzinfo=timezone.utc)
+    assert _coerce_utc(aware) == aware
+    assert _coerce_utc(None) is None
