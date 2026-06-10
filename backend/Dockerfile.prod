@@ -20,6 +20,9 @@ RUN pip install --no-cache-dir uv \
 # Production stage
 FROM python:3.12-slim
 
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -m -g appuser appuser
 
