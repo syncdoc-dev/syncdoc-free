@@ -259,7 +259,7 @@ async def github_login() -> RedirectResponse:
         "https://github.com/login/oauth/authorize"
         f"?client_id={settings.github_client_id}"
         "&scope=repo,read:user,user:email"
-        f"&redirect_uri={settings.backend_url.rstrip('/')}/api/auth/github/callback"
+        f"&redirect_uri={settings.frontend_url.rstrip('/')}/api/auth/github/callback"
         f"&state={state}"
     )
     response = RedirectResponse(github_auth_url)
