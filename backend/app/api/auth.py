@@ -263,9 +263,7 @@ async def github_login(request: Request) -> RedirectResponse:
     backend_host = urlparse(settings.backend_url).hostname
     request_host = request.url.hostname
     if request_host and backend_host and request_host != backend_host:
-        return RedirectResponse(
-            f"{settings.backend_url.rstrip('/')}/api/auth/github"
-        )
+        return RedirectResponse(f"{settings.backend_url.rstrip('/')}/api/auth/github")
 
     state = secrets.token_urlsafe(32)
     github_auth_url = (

@@ -167,10 +167,20 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, settings.stripe_webhook_secret)
+    except stripe.error.SignatureVerificationError:
+        # If live secret fails, try test secret in case this is a test-mode event
+        # (Stripe may send test events to the same endpoint when both are configured).
+        if settings.stripe_test_webhook_secret:
+            try:
+                event = stripe.Webhook.construct_event(
+                    payload, sig_header, settings.stripe_test_webhook_secret
+                )
+            except stripe.error.SignatureVerificationError:
+                raise HTTPException(status_code=400, detail="Invalid signature")
+        else:
+            raise HTTPException(status_code=400, detail="Invalid signature")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
 
     await _handle_stripe_event(event, db)
     return {"status": "ok"}
