@@ -6,6 +6,8 @@ WORKDIR /app
 # Build-time version injected into the frontend bundle
 ARG APP_VERSION=dev
 ENV VITE_APP_VERSION=$APP_VERSION
+ARG VITE_API_URL=
+ENV VITE_API_URL=$VITE_API_URL
 
 # Install dependencies
 COPY package.json package-lock.json ./

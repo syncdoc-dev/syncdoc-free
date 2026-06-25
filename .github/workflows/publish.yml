@@ -32,9 +32,28 @@ jobs:
           - context: .
             image_suffix: syncdoc-api
             dockerfile: backend/Dockerfile.prod
+            vite_api_url: ""
+            numpy_version: ""
+          - context: .
+            image_suffix: syncdoc-api-cpuv1
+            dockerfile: backend/Dockerfile.prod
+            vite_api_url: ""
+            numpy_version: "1.26.4"
           - context: .
             image_suffix: syncdoc-frontend
             dockerfile: frontend/Dockerfile.prod
+            vite_api_url: ""
+            numpy_version: ""
+          - context: .
+            image_suffix: syncdoc-frontend-app
+            dockerfile: frontend/Dockerfile.prod
+            vite_api_url: "https://api.syncdoc.dev"
+            numpy_version: ""
+          - context: .
+            image_suffix: syncdoc-frontend-demo
+            dockerfile: frontend/Dockerfile.prod
+            vite_api_url: "https://demo.syncdoc.dev"
+            numpy_version: ""
 
     steps:
       - uses: actions/checkout@v6
@@ -74,6 +93,8 @@ jobs:
           push: true
           build-args: |
             APP_VERSION=${{ github.ref_name }}
+            VITE_API_URL=${{ matrix.vite_api_url }}
+            NUMPY_VERSION=${{ matrix.numpy_version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -154,4 +175,6 @@ jobs:
           push: false
           build-args: |
             APP_VERSION=${{ github.sha }}
+            VITE_API_URL=${{ matrix.vite_api_url }}
+            NUMPY_VERSION=${{ matrix.numpy_version }}
           tags: docker.io/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image_suffix }}:dry-run
